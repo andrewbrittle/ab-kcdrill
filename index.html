@@ -48,6 +48,16 @@
     --conf-pos1: rgba(111,207,151,0.15); --conf-pos2: rgba(111,207,151,0.30);
     --conf-pos3: rgba(111,207,151,0.45); --conf-pos4: rgba(111,207,151,0.60);
     --conf-untested: rgba(255,255,255,0.22);
+    /* Bolder counterparts of the --conf-* set above, for the progress bar
+       only - the tile tints stay muted on purpose (the character and its
+       text still have to read clearly on top), but the bar has nothing
+       sitting on top of it, so it can afford much more saturation and is
+       easier to read at a glance with it. */
+    --conf-neg3-bar: rgba(235,87,87,0.92); --conf-neg2-bar: rgba(235,87,87,0.68); --conf-neg1-bar: rgba(235,87,87,0.42);
+    --conf-neutral-bar: rgba(126,184,247,0.55);
+    --conf-pos1-bar: rgba(111,207,151,0.42); --conf-pos2-bar: rgba(111,207,151,0.65);
+    --conf-pos3-bar: rgba(111,207,151,0.85); --conf-pos4-bar: #6fcf97;
+    --conf-untested-bar: rgba(255,255,255,0.38);
     /* The card's own border - deliberately stronger than --border (which
        stays subtle for tiles/inputs everywhere else), since the card is the
        one thing on screen that needs to read as a distinct object rather
@@ -64,6 +74,11 @@
     --blue: #2f6fa8; --blue-dim: rgba(47,111,168,0.12);
     --card-border: rgba(0,0,0,0.20);
     --conf-untested: rgba(0,0,0,0.16);
+    --conf-neg3-bar: rgba(197,61,61,0.88); --conf-neg2-bar: rgba(197,61,61,0.62); --conf-neg1-bar: rgba(197,61,61,0.38);
+    --conf-neutral-bar: rgba(47,111,168,0.50);
+    --conf-pos1-bar: rgba(47,158,92,0.38); --conf-pos2-bar: rgba(47,158,92,0.60);
+    --conf-pos3-bar: rgba(47,158,92,0.80); --conf-pos4-bar: #2f9e5c;
+    --conf-untested-bar: rgba(0,0,0,0.30);
   }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -106,10 +121,13 @@
   .btn-gold:disabled:hover { background: transparent; }
 
   /* Progress overview - a proportional stacked bar across all cards, using
-     the exact same --conf-* colours as the tile grid so it reads as the
-     same confidence scale, not a new one. Untested cards get their own
-     neutral-grey segment at the front rather than being folded into "weak",
-     since not-yet-tested isn't a bad result, just an unknown one. */
+     bolder versions of the same red/blue/green confidence scale the tile
+     grid uses (--conf-*-bar, not --conf-*) - the tiles need to stay muted
+     so the character and text on top stay readable, but nothing sits on
+     top of the bar, so it can be much more saturated and easier to read at
+     a glance. Same scale, same order, just turned up. Untested cards get
+     their own grey segment at the front rather than being folded into
+     "weak", since not-yet-tested isn't a bad result, just an unknown one. */
   .progress-block { display: flex; flex-direction: column; gap: 6px; }
   .progress-bar {
     display: flex; height: 22px; border-radius: 99px; overflow: hidden;
@@ -840,7 +858,7 @@ function refreshProgress() {
     const el = document.createElement('div');
     el.className = 'seg';
     el.style.width = (n / total * 100) + '%';
-    el.style.background = 'var(--conf-' + seg.band + ')';
+    el.style.background = 'var(--conf-' + seg.band + '-bar)';
     el.title = n + ' ' + seg.label.toLowerCase();
     bar.appendChild(el);
   });
@@ -848,10 +866,10 @@ function refreshProgress() {
   // the bar's tooltips, so the numbers underneath stay readable rather than
   // listing all 8 - the bar itself still shows the finer gradient.
   const buckets = [
-    { label: 'Untested', dot: 'var(--text-dim)', n: counts.untested },
-    { label: 'Struggling', dot: 'var(--conf-neg2)', n: counts.neg3 + counts.neg2 + counts.neg1 },
-    { label: 'Building', dot: 'var(--conf-pos1)', n: counts.neutral + counts.pos1 + counts.pos2 },
-    { label: 'Confident', dot: 'var(--conf-pos4)', n: counts.pos3 + counts.pos4 },
+    { label: 'Untested', dot: 'var(--conf-untested-bar)', n: counts.untested },
+    { label: 'Struggling', dot: 'var(--conf-neg2-bar)', n: counts.neg3 + counts.neg2 + counts.neg1 },
+    { label: 'Building', dot: 'var(--conf-pos1-bar)', n: counts.neutral + counts.pos1 + counts.pos2 },
+    { label: 'Confident', dot: 'var(--conf-pos4-bar)', n: counts.pos3 + counts.pos4 },
   ];
   const legend = document.getElementById('progress-legend');
   legend.innerHTML = buckets.filter(b => b.n).map(b =>
