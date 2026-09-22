@@ -415,7 +415,7 @@
     </div>
     <div class="status" id="status"></div>
     <button class="btn" onclick="toggleSettings()">← Back</button>
-    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.75rem;">v260922.001</div>
+    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.75rem;">v260922.002</div>
   </div>
 
 </main>
@@ -533,7 +533,12 @@ async function tryUnlock(passphrase) {
   try {
     const json = await decryptCards(passphrase);
     KANJI_CARDS = JSON.parse(json);
-    try { localStorage.setItem(CARDS_CACHE_KEY, json); } catch (e) {} // best-effort - a private/full storage just means asking again next time
+    // Cache is tagged with the current ciphertext's IV, which is freshly
+    // random every time the card data is re-encrypted (see bootstrap()) -
+    // so a stale cache from before a new batch of cards was added gets
+    // detected and thrown away automatically, instead of silently serving
+    // last week's card count forever.
+    try { localStorage.setItem(CARDS_CACHE_KEY, JSON.stringify({ sig: ENCRYPTED_CARDS.iv, json })); } catch (e) {} // best-effort - a private/full storage just means asking again next time
     initApp();
   } catch (e) {
     errEl.textContent = 'Wrong passphrase (or the data got corrupted) - try again.';
@@ -554,10 +559,22 @@ async function bootstrap() {
     document.getElementById('unlock-btn').disabled = true;
     return;
   }
-  let cached = null;
-  try { cached = localStorage.getItem(CARDS_CACHE_KEY); } catch (e) {}
-  if (cached) {
-    try { KANJI_CARDS = JSON.parse(cached); initApp(); return; }
+  let cachedRaw = null;
+  try { cachedRaw = localStorage.getItem(CARDS_CACHE_KEY); } catch (e) {}
+  if (cachedRaw) {
+    try {
+      const cached = JSON.parse(cachedRaw);
+      // cached.sig is only present in the newer cache format (see
+      // tryUnlock()) - an older cache, or one from before a card-data
+      // update changed the ciphertext's IV, won't match and falls through
+      // to ask for the passphrase again, which re-decrypts and re-caches
+      // the current data.
+      if (cached && cached.sig === ENCRYPTED_CARDS.iv) {
+        KANJI_CARDS = JSON.parse(cached.json);
+        initApp();
+        return;
+      }
+    }
     catch (e) { /* corrupt cache - fall through and ask for the passphrase again */ }
   }
   showScreen('unlock');
