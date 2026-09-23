@@ -122,6 +122,6 @@ bumping alongside any data change, which this project doesn't track.
 
 ## Source files
 
-- `JK4B_Flashcard_Front.pdf` / `JK4B_Flashcard_Back.pdf` — 29 pages each,
-  15 cards per page, ~435 cards total. Currently transcribed: cards 1–225
-  (pages 1–15).
+- `JK4B_Flashcard_Front.pdf` / `JK4B_Flashcard_Back.pdf` — 29 pages, 15
+  cards per page except the last (page 29 has only card 430). 430 cards
+  total. **Transcription complete: all cards 1–430.**
