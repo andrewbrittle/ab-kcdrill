@@ -109,11 +109,11 @@
     cursor: pointer; font-family: inherit; white-space: nowrap;
   }
   .pill.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
-  /* Gold border on both the pills and the all-pages random button, so the
+  /* Gold border on both the pills and the all-groups random button, so the
      two main ways into a drill stand out from the plain-bordered utility
      buttons (Clear, back, settings toggles) around them. */
   /* Shared gold-border treatment for the home screen's three pool buttons
-     (Random/Weak/Untested) - same visual weight as the page pills below
+     (Random/Weak/Untested) - same visual weight as the group pills below
      them, so all the "get me into a drill" controls read as one family. */
   .btn-gold { border: 1.5px solid var(--accent); font-size: 13px; padding: 12px 4px; }
   .btn-gold:hover { border-color: var(--accent); background: var(--accent-dim); }
@@ -201,12 +201,12 @@
   .btn-hint:hover { border-color: var(--accent); background: var(--accent-dim); }
 
   /* Selection grid */
-  .page-head {
+  .block-head {
     display: flex; justify-content: space-between; align-items: center;
     font-size: 12px; font-weight: 700; color: var(--text-dim); margin: 0.6rem 0 0.35rem;
     padding: 0 0.2rem; cursor: pointer; user-select: none;
   }
-  .page-head:hover { color: var(--accent); }
+  .block-head:hover { color: var(--accent); }
   .tile-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
   .tile {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -328,7 +328,7 @@
   </div>
 
   <!-- Home: progress overview, search, three ways to pick a 20-card set (or a
-       page group below), then study toggle, then start -->
+       browsed group below), then study toggle, then start -->
   <div class="screen" id="screen-home">
     <div class="title">Kanji Cards</div>
     <div class="sub" id="home-sub"></div>
@@ -350,7 +350,11 @@
       <div class="progress-legend" id="progress-legend"></div>
     </div>
 
-    <div class="section-label">Or pick a set of pages</div>
+    <div class="section-label">Or browse a group</div>
+    <div class="btn-row">
+      <button class="btn active" id="browse-tab-order" onclick="setHomeBrowseMode('order')">In order</button>
+      <button class="btn" id="browse-tab-part" onclick="setHomeBrowseMode('part')">By part</button>
+    </div>
     <div class="pill-row" id="group-pills"></div>
     <div class="setting study-toggle" id="set-study-home" onclick="toggleStudy()">
       <div><div class="n">Study mode</div><div class="d">Everything visible at once, no scoring - for first exposure</div></div>
@@ -359,9 +363,9 @@
     <button class="btn btn-primary" id="home-start-btn" onclick="startFromSelection()" disabled>Start</button>
   </div>
 
-  <!-- Group: the familiar tile-selection screen, scoped to one set of pages -->
+  <!-- Group: the familiar tile-selection screen, scoped to one group -->
   <div class="screen" id="screen-select">
-    <button class="btn" onclick="showHome()">← All pages</button>
+    <button class="btn" onclick="showHome()">← Home</button>
     <div class="title" id="group-title">Kanji Cards</div>
     <div class="sub" id="select-sub"></div>
     <div class="btn-row">
@@ -415,7 +419,7 @@
     </div>
     <div class="status" id="status"></div>
     <button class="btn" onclick="toggleSettings()">← Back</button>
-    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.75rem;">v260923.003</div>
+    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.75rem;">v260924.001</div>
   </div>
 
 </main>
@@ -430,8 +434,7 @@
 // (Word entries were plain [kana, romaji, English, kanji, bonus?] tuples up
 // to card 150 - migrated to this object shape once positional indices in
 // wordsHtml() started feeling too easy to get wrong as the deck grew.)
-// Cards 1-300 so far (pages 1-20 of the source PDF), added in batches as the
-// mechanics get tried out and refined, before transcribing the rest.
+// All 430 cards from the source PDF transcribed.
 // =============================================================================
 // Encrypted at rest - this file is pushed to a public GitHub repo, so the
 // transcribed card content (copyrighted textbook material) shouldn't sit in
@@ -453,7 +456,12 @@ let KANJI_CARDS = []; // populated by tryUnlock() once the passphrase checks out
 // END CARD DATA
 // =============================================================================
 
-const PAGE_SIZE = 15;
+// Cards are no longer grouped by their source book page (that concept
+// doesn't mean anything outside a paper flashcard deck) - blocks of 20,
+// keyed purely by card number, matching the stroke-trainer companion app
+// so scores/selections line up between the two. See PART_GROUPS below for
+// the trainer's other browsing mode, by shared kanji component.
+const BLOCK_SIZE = 20;
 const BY_NUM = {}; // populated by initApp() once KANJI_CARDS is decrypted
 
 // Runs once on every load and just console.warns - this used to be a manual
@@ -520,6 +528,7 @@ async function decryptCards(passphrase) {
 function initApp() {
   KANJI_CARDS.forEach(c => { BY_NUM[c.n] = c; });
   GROUPS = computeGroups();
+  PART_GROUPS = computePartGroups();
   activePool = KANJI_CARDS;
   checkDataIntegrity();
   buildGroupPills();
@@ -677,7 +686,7 @@ function toggleSetting(key) {
 /* ---------- Study toggle ----------
    Study used to be a third mode pill, but it isn't really a drill variant -
    it's an orthogonal way of running whatever selection you've made (global
-   random or a page group), with its own display and no scoring. So it's a
+   random or a browsed group), with its own display and no scoring. So it's a
    toggle that sits above Start wherever Start appears, not a pill. Two
    physical toggle elements share the one settings.study value (home screen
    and inside a group), kept in sync by class rather than id. */
@@ -690,38 +699,82 @@ function refreshStudyToggle() {
   document.querySelectorAll('.study-toggle').forEach(el => el.classList.toggle('on', settings.study));
 }
 
-/* ---------- Page groups ----------
+/* ---------- Groups: in order, and by shared part ----------
    Selecting from all 400+ cards on one screen doesn't scale, so the front
-   screen only ever shows page-range pills (5 pages / ~75 cards each,
-   computed from however many cards actually exist - no manual upkeep as
-   more get transcribed) and a global Random 20. Opening a pill drops into
-   the familiar tile-selection screen, scoped to just that range. */
-const PAGES_PER_GROUP = 5;
+   screen only ever shows group pills and a global Random 20. Opening a
+   pill drops into the familiar tile-selection screen, scoped to just that
+   group. Two ways to browse, both keyed by card number (not book page, so
+   they line up with the stroke-trainer companion app's own groupings):
+
+   - In order: blocks of 20 cards (1-20, 21-40, ... last block short),
+     5 blocks per home pill - computed from however many cards actually
+     exist, no manual upkeep as more get transcribed.
+   - By part: cards that share a kanji component (see PART_GROUPS_DATA),
+     handed over pre-computed from the trainer rather than derived here -
+     it needs KanjiVG's stroke-group SVGs, which this app has no reason to
+     carry. Re-request an updated handover note from that app if the card
+     count here ever changes. */
+const BLOCKS_PER_PILL = 5;
 function computeGroups() {
-  const totalPages = Math.ceil(KANJI_CARDS.length / PAGE_SIZE);
+  const totalBlocks = Math.ceil(KANJI_CARDS.length / BLOCK_SIZE);
   const groups = [];
-  for (let startPage = 1; startPage <= totalPages; startPage += PAGES_PER_GROUP) {
-    const endPage = Math.min(startPage + PAGES_PER_GROUP - 1, totalPages);
-    const startCard = (startPage - 1) * PAGE_SIZE + 1;
-    const endCard = Math.min(endPage * PAGE_SIZE, KANJI_CARDS.length);
+  for (let startBlock = 1; startBlock <= totalBlocks; startBlock += BLOCKS_PER_PILL) {
+    const endBlock = Math.min(startBlock + BLOCKS_PER_PILL - 1, totalBlocks);
+    const startCard = (startBlock - 1) * BLOCK_SIZE + 1;
+    const endCard = Math.min(endBlock * BLOCK_SIZE, KANJI_CARDS.length);
     groups.push({
-      label: endPage > startPage ? ('Page ' + startPage + '–' + endPage) : ('Page ' + startPage),
+      label: startCard + '–' + endCard,
       cards: KANJI_CARDS.filter(c => c.n >= startCard && c.n <= endCard),
     });
   }
   return groups;
 }
-let GROUPS = []; // computed by initApp() once KANJI_CARDS is decrypted
+// Handed over from the stroke trainer (Downloads/strokes/index.html) - see
+// that app's handover note for how these are derived (KanjiVG component
+// groups) and regenerate there, not here, when the card count changes.
+const PART_GROUPS_DATA = [{"part": "口", "name": "mouth", "cards": [57, 38, 48, 70, 75, 118, 138, 152, 164, 172, 178, 180, 195, 262, 272, 273, 286, 289, 293, 404, 410, 416]}, {"part": "日", "name": "sun", "cards": [15, 63, 65, 89, 107, 119, 137, 160, 185, 198, 207, 213, 221, 222, 224, 228, 241, 308, 333, 338, 421]}, {"part": "木", "name": "tree", "cards": [19, 84, 85, 122, 123, 137, 144, 159, 167, 169, 183, 205, 217, 331, 349, 353, 355, 368, 382, 403]}, {"part": "亻", "name": "person", "cards": [68, 90, 144, 145, 174, 229, 233, 245, 279, 283, 285, 287, 288, 290, 321, 405, 417]}, {"part": "氵", "name": "water", "cards": [179, 188, 266, 300, 310, 314, 330, 337, 345, 346, 352, 360, 363, 372, 377, 408]}, {"part": "⻌", "name": "movement", "cards": [56, 127, 216, 231, 239, 240, 259, 265, 357, 361, 376, 383, 415, 430]}, {"part": "言", "name": "say", "cards": [75, 76, 77, 233, 234, 261, 306, 375, 396, 409]}, {"part": "糸", "name": "thread", "cards": [189, 190, 232, 251, 268, 271, 278, 317, 356, 385]}, {"part": "月", "name": "moon, flesh", "cards": [16, 147, 160, 162, 201, 211, 218, 269, 323]}, {"part": "女", "name": "woman", "cards": [30, 33, 158, 170, 171, 277, 318, 320, 414]}, {"part": "宀", "name": "roof", "cards": [49, 86, 150, 158, 175, 249, 256, 335, 398]}, {"part": "亠", "name": "lid", "cards": [6, 34, 87, 92, 130, 131, 168, 214]}, {"part": "十", "name": "ten", "cards": [10, 12, 64, 119, 135, 152, 257, 409]}, {"part": "土", "name": "earth", "cards": [20, 62, 139, 200, 223, 263, 343, 388]}, {"part": "艹", "name": "grass", "cards": [120, 121, 154, 184, 203, 309, 358, 384]}, {"part": "田", "name": "rice field", "cards": [24, 28, 74, 102, 129, 275, 342]}, {"part": "門", "name": "gate", "cards": [52, 53, 54, 65, 72, 273, 322]}, {"part": "心", "name": "heart", "cards": [61, 74, 242, 284, 397, 407, 413]}, {"part": "灬", "name": "fire", "cards": [94, 95, 202, 298, 332, 426, 428]}, {"part": "囗", "name": "enclosure", "cards": [4, 70, 133, 331, 344, 394]}, {"part": "八", "name": "eight", "cards": [8, 6, 66, 91, 173, 204]}, {"part": "王", "name": "king", "cards": [21, 132, 168, 197, 378, 427]}, {"part": "人", "name": "person", "cards": [26, 42, 67, 78, 422, 427]}, {"part": "大", "name": "big", "cards": [39, 93, 116, 153, 156, 319]}, {"part": "厶", "name": "private", "cards": [81, 91, 161, 223, 272, 386]}, {"part": "扌", "name": "hand", "cards": [105, 146, 236, 254, 264, 386]}, {"part": "白", "name": "white", "cards": [107, 11, 230, 267, 304, 360]}, {"part": "儿", "name": "legs", "cards": [4, 73, 80, 115, 172]}, {"part": "目", "name": "eye", "cards": [58, 73, 148, 281, 368]}, {"part": "寸", "name": "measure", "cards": [62, 88, 285, 305, 403]}, {"part": "寺", "name": "temple", "cards": [62, 63, 104, 105, 411]}, {"part": "禾", "name": "grain", "cards": [81, 178, 181, 209, 418]}, {"part": "冂", "name": "frame", "cards": [14, 42, 315, 416]}, {"part": "山", "name": "mountain", "cards": [23, 51, 315, 347]}, {"part": "力", "name": "power", "cards": [27, 28, 186, 260]}, {"part": "子", "name": "child", "cards": [32, 33, 83, 86]}, {"part": "小", "name": "small", "cards": [36, 37, 401, 429]}, {"part": "夕", "name": "evening", "cards": [40, 41, 43, 164]}, {"part": "卜", "name": "divination", "cards": [43, 44, 45, 141]}, {"part": "工", "name": "craft", "cards": [46, 47, 258, 351]}, {"part": "刀", "name": "sword", "cards": [66, 219, 359, 371]}, {"part": "又", "name": "right hand", "cards": [82, 192, 253, 367]}, {"part": "立", "name": "stand", "cards": [92, 185, 291, 330]}, {"part": "刂", "name": "knife", "cards": [106, 270, 412, 418]}, {"part": "止", "name": "stop", "cards": [141, 142, 143, 429]}, {"part": "广", "name": "building", "cards": [161, 292, 340, 393]}, {"part": "里", "name": "village", "cards": [197, 202, 248, 348]}, {"part": "竹", "name": "bamboo", "cards": [225, 274, 329, 423]}, {"part": "頁", "name": "head", "cards": [250, 324, 325, 366]}, {"part": "貝", "name": "shell, money", "cards": [293, 295, 362, 365]}, {"part": "⻖", "name": "hill", "cards": [312, 339, 390, 406]}, {"part": "隹", "name": "bird", "cards": [382, 383, 419, 420]}, {"part": "千", "name": "thousand", "cards": [12, 248, 349]}, {"part": "方", "name": "direction", "cards": [34, 124, 166]}, {"part": "开", "name": "open", "cards": [53, 302, 327]}, {"part": "斤", "name": "axe", "cards": [55, 56, 151]}, {"part": "耳", "name": "ear", "cards": [59, 72, 367]}, {"part": "干", "name": "dry", "cards": [69, 215, 226]}, {"part": "見", "name": "see", "cards": [73, 316, 378]}, {"part": "舌", "name": "tongue", "cards": [77, 276, 314]}, {"part": "云", "name": "cloud", "cards": [78, 229, 350]}, {"part": "匕", "name": "spoon", "cards": [90, 134, 303]}, {"part": "馬", "name": "horse", "cards": [95, 128, 252]}, {"part": "牛", "name": "cow", "cards": [97, 110, 411]}, {"part": "米", "name": "rice", "cards": [100, 101, 196]}, {"part": "彳", "name": "step", "cards": [103, 104, 165]}, {"part": "雨", "name": "rain", "cards": [111, 112, 113]}, {"part": "車", "name": "vehicle", "cards": [125, 231, 350]}, {"part": "己", "name": "self", "cards": [140, 364, 396]}, {"part": "自", "name": "oneself", "cards": [148, 126, 149]}, {"part": "主", "name": "master", "cards": [168, 174, 408]}, {"part": "未", "name": "not yet", "cards": [169, 171, 195]}, {"part": "矢", "name": "arrow", "cards": [180, 246, 307]}, {"part": "攵", "name": "strike", "cards": [182, 183, 297]}, {"part": "音", "name": "sound", "cards": [185, 241, 407]}, {"part": "飠", "name": "food", "cards": [193, 194, 392]}, {"part": "欠", "name": "yawn", "cards": [194, 220, 280]}, {"part": "由", "name": "reason", "cards": [198, 204, 227]}, {"part": "青", "name": "blue", "cards": [201, 244, 338]}, {"part": "夂", "name": "winter", "cards": [208, 210, 247]}, {"part": "冫", "name": "ice", "cards": [210, 220, 336]}, {"part": "豆", "name": "bean", "cards": [246, 282, 324]}, {"part": "台", "name": "stand, base", "cards": [272, 277, 310]}, {"part": "売", "name": "sell", "cards": [296, 306, 385]}, {"part": "者", "name": "someone", "cards": [308, 333, 400]}, {"part": "礻", "name": "altar", "cards": [369, 387, 388]}];
+let GROUPS = []; // in-order blocks, computed by initApp() once KANJI_CARDS is decrypted
+let PART_GROUPS = []; // by-part groups, same timing - card numbers above resolved to actual cards via BY_NUM
+function computePartGroups() {
+  return PART_GROUPS_DATA.map(g => ({
+    part: g.part,
+    name: g.name,
+    // Order from the handover data is meaningful (the shared part's own
+    // card comes first when it's one of the 430) - resolve in place, don't
+    // re-sort by card number.
+    cards: g.cards.map(n => BY_NUM[n]).filter(Boolean),
+  })).filter(g => g.cards.length >= 3);
+}
+// 'order' | 'part' - which set of pills the home screen shows; the three
+// gold pool buttons and search above it are unaffected by this, they
+// always draw from the whole deck.
+let homeBrowseMode = 'order';
+function setHomeBrowseMode(mode) {
+  homeBrowseMode = mode;
+  document.getElementById('browse-tab-order').classList.toggle('active', mode === 'order');
+  document.getElementById('browse-tab-part').classList.toggle('active', mode === 'part');
+  buildGroupPills();
+}
 function buildGroupPills() {
   const wrap = document.getElementById('group-pills');
   wrap.innerHTML = '';
-  GROUPS.forEach((g, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'pill';
-    btn.textContent = g.label + ' (' + g.cards.length + ')';
-    btn.onclick = () => openGroup(i);
-    wrap.appendChild(btn);
-  });
+  if (homeBrowseMode === 'part') {
+    PART_GROUPS.forEach((g, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'pill';
+      btn.textContent = g.part + ' ' + g.name + ' (' + g.cards.length + ')';
+      btn.onclick = () => openPartGroup(i);
+      wrap.appendChild(btn);
+    });
+  } else {
+    GROUPS.forEach((g, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'pill';
+      btn.textContent = g.label + ' (' + g.cards.length + ')';
+      btn.onclick = () => openGroup(i);
+      wrap.appendChild(btn);
+    });
+  }
 }
 
 /* ---------- Selection screens (home + group share this state) ---------- */
@@ -729,7 +782,7 @@ const selected = new Set();
 // When true, `selected` holds a genuine random 20, but every tile is shown
 // selected and made untappable, so there's no way to see which 20 you'll get
 // - same "honest surprise" disguise as the main app's own Random N. Clicking
-// any real selection control (a tile, a page heading, Clear) breaks the
+// any real selection control (a tile, a block heading, Clear) breaks the
 // disguise, same as there. Home has no grid to disguise, so its own random
 // selection only toggles the button label, not any tiles.
 let randomMode = false;
@@ -749,7 +802,20 @@ function openGroup(i) {
   selected.clear(); randomMode = false;
   returnToScreen = 'select';
   document.getElementById('group-title').textContent = 'Kanji Cards · ' + g.label;
-  buildGrid();
+  buildGrid('blocks');
+  showScreen('select');
+}
+// Order here is the handover data's own (the shared part's card first, if
+// it's one of the 430, then whatever order that app computed) rather than
+// card-number order, and the cards span many blocks - so no block headers,
+// just one flat grid with a single "select all" heading. See buildGrid().
+function openPartGroup(i) {
+  const g = PART_GROUPS[i];
+  activePool = g.cards;
+  selected.clear(); randomMode = false;
+  returnToScreen = 'select';
+  document.getElementById('group-title').textContent = 'Kanji Cards · ' + g.part + ' · ' + g.name;
+  buildGrid('flat');
   showScreen('select');
 }
 /* ---------- Search by meaning ----------
@@ -758,7 +824,7 @@ function openGroup(i) {
    Word-prefix matching mirrors the main app's vocab search: every query
    word has to prefix-match some word in the card's meaning field, so "dog"
    finds "Dog" and "wr" finds "To write". Results reuse the group screen,
-   same as a page group or the home Random 20 would. */
+   same as a browsed group or the home Random 20 would. */
 function searchWords(str) {
   return str ? str.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean) : [];
 }
@@ -793,7 +859,7 @@ function openSearchResults(cards, query) {
   selected.clear(); randomMode = false;
   returnToScreen = 'home';
   document.getElementById('group-title').textContent = 'Kanji Cards · "' + query + '"';
-  buildGrid();
+  buildGrid('blocks');
   showScreen('select');
 }
 /* ---------- Home's three pool buttons ----------
@@ -868,7 +934,7 @@ const PROGRESS_SEGMENTS = [
 // The bar defaults to hiding the untested (grey) segment and re-scaling to
 // 100% across just the cards you've actually been tested on - "of the kanji
 // you've seen so far, this is how you're doing" - since a big grey slab only
-// gets more overwhelming as more pages are added, and it doesn't tell you
+// gets more overwhelming, and it doesn't tell you
 // anything about how you're actually doing on what you've studied. Tapping
 // the bar toggles the full picture (untested included, scaled across every
 // card) back on. The legend underneath always shows all four figures,
@@ -917,36 +983,55 @@ function refreshProgress() {
     '<span class="leg-item"><span class="leg-dot" style="background:' + b.dot + '"></span>' + b.n + ' ' + b.label + '</span>'
   ).join('');
 }
-// Groups activePool's cards by their real page number (not by position
-// within the group), so a group other than the first still labels its pages
-// correctly - e.g. the "Page 6-10" group shows "Page 6", "Page 7"... not
-// restarting at "Page 1".
-function buildGrid() {
+function makeTileGrid(cards) {
+  const tiles = document.createElement('div');
+  tiles.className = 'tile-grid';
+  cards.forEach(c => {
+    const t = document.createElement('div');
+    t.className = 'tile';
+    t.dataset.n = c.n;
+    t.innerHTML = '<div class="tk">' + esc(c.k) + '</div><div class="tm">' + esc(c.m.split(/[;,]/)[0]) + '</div>';
+    t.onclick = () => toggleTile(c.n);
+    tiles.appendChild(t);
+  });
+  return tiles;
+}
+// mode 'blocks' (in-order groups, search results): groups activePool's
+// cards by their real block of 20 (not by position within the group), so a
+// group other than the first still labels its blocks with real card
+// numbers - e.g. opening "101–200" shows "Kanji 101–120", "Kanji 121–140"...
+// not restarting at 1. mode 'flat' (by-part groups): cards span many
+// blocks in a meaningful, non-numeric order (see openPartGroup), so no
+// block headers - just one grid with a single "select all" heading.
+function buildGrid(mode) {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
-  const byPage = {};
-  activePool.forEach(c => {
-    const p = Math.ceil(c.n / PAGE_SIZE);
-    (byPage[p] = byPage[p] || []).push(c);
-  });
-  Object.keys(byPage).map(Number).sort((a, b) => a - b).forEach(p => {
-    const cards = byPage[p];
+  if (mode === 'flat') {
     const head = document.createElement('div');
-    head.className = 'page-head';
-    head.innerHTML = '<span>Page ' + p + ' · cards ' + cards[0].n + '–' + cards[cards.length - 1].n + '</span><span>tap to select page</span>';
-    head.onclick = () => togglePage(cards);
+    head.className = 'block-head';
+    head.innerHTML = '<span>' + activePool.length + ' kanji</span><span>tap to select all</span>';
+    head.onclick = () => toggleBlock(activePool);
     grid.appendChild(head);
-    const tiles = document.createElement('div');
-    tiles.className = 'tile-grid';
-    cards.forEach(c => {
-      const t = document.createElement('div');
-      t.className = 'tile';
-      t.dataset.n = c.n;
-      t.innerHTML = '<div class="tk">' + esc(c.k) + '</div><div class="tm">' + esc(c.m.split(/[;,]/)[0]) + '</div>';
-      t.onclick = () => toggleTile(c.n);
-      tiles.appendChild(t);
-    });
-    grid.appendChild(tiles);
+    grid.appendChild(makeTileGrid(activePool));
+    refreshTiles();
+    return;
+  }
+  const byBlock = {};
+  activePool.forEach(c => {
+    const b = Math.ceil(c.n / BLOCK_SIZE);
+    (byBlock[b] = byBlock[b] || []).push(c);
+  });
+  Object.keys(byBlock).map(Number).sort((a, b) => a - b).forEach(b => {
+    const cards = byBlock[b];
+    const range = cards[0].n === cards[cards.length - 1].n
+      ? String(cards[0].n)
+      : (cards[0].n + '–' + cards[cards.length - 1].n);
+    const head = document.createElement('div');
+    head.className = 'block-head';
+    head.innerHTML = '<span>Kanji ' + range + '</span><span>tap to select block</span>';
+    head.onclick = () => toggleBlock(cards);
+    grid.appendChild(head);
+    grid.appendChild(makeTileGrid(cards));
   });
   refreshTiles();
 }
@@ -961,7 +1046,7 @@ function refreshTiles() {
   });
   document.getElementById('start-btn').disabled = selected.size === 0;
   document.getElementById('start-btn').textContent = selected.size ? 'Start · ' + selected.size + ' card' + (selected.size === 1 ? '' : 's') : 'Start';
-  document.getElementById('select-sub').textContent = activePool.length + ' cards in this set · tap kanji to pick them, or tap a page heading';
+  document.getElementById('select-sub').textContent = activePool.length + ' cards in this set · tap kanji to pick them, or tap a block heading';
   const randomBtn = document.getElementById('random-btn');
   randomBtn.classList.toggle('active', randomMode);
   randomBtn.textContent = randomMode ? 'Deselect all' : 'Random 20';
@@ -971,7 +1056,7 @@ function toggleTile(n) {
   selected.has(n) ? selected.delete(n) : selected.add(n);
   refreshTiles();
 }
-function togglePage(cards) {
+function toggleBlock(cards) {
   if (randomMode) return;
   const all = cards.every(c => selected.has(c.n));
   cards.forEach(c => all ? selected.delete(c.n) : selected.add(c.n));
