@@ -1,7 +1,7 @@
 {
   "name": "Kanji Cards",
   "short_name": "Kanji Cards",
-  "description": "Spaced-repetition kanji flashcard drill, transcribed from Japanese Kanji for Beginners.",
+  "description": "Spaced-repetition kanji flashcard drill for a 500-kanji study list.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
