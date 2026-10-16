@@ -237,10 +237,15 @@
   .tile-peek-bubble {
     position: fixed; z-index: 1000; pointer-events: none;
     background: var(--surface); border: 2px solid var(--accent); border-radius: 12px;
-    padding: 10px 14px; text-align: center; width: max-content; max-width: min(82vw, 320px);
+    padding: 10px 14px; text-align: left; width: max-content; max-width: min(82vw, 320px);
     box-shadow: 0 6px 24px rgba(0,0,0,0.45);
   }
-  .peek-head { text-align: center; }
+  /* The character itself, top-left: a finger is covering the tile's own
+     kanji while holding it, so the bubble is the only place left to see
+     what's actually being held. */
+  .peek-top { display: flex; align-items: center; gap: 12px; }
+  .peek-char { font-family: 'BIZ UDPGothic', sans-serif; font-size: 40px; line-height: 1; flex: none; }
+  .peek-head { text-align: left; }
   .peek-m { font-size: 15px; font-weight: 700; color: var(--accent); }
   .peek-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
   .peek-rd { font-size: 14px; margin-top: 8px; text-align: left; line-height: 1.5; }
@@ -476,7 +481,7 @@
     </div>
     <div class="status" id="status"></div>
     <div style="text-align:center; font-size:11px; color:var(--text-dim); margin-top:0.9rem; line-height:1.5;">Meanings and kanji data from KANJIDIC2, example words checked against JMdict — both © EDRDG, CC BY-SA 4.0.</div>
-    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.4rem;">v261016.001</div>
+    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.4rem;">v261016.002</div>
   </div>
 
 </main>
@@ -1287,8 +1292,9 @@ function showPeekBubble(tile, c) {
   const b = document.createElement('div');
   b.className = 'tile-peek-bubble'; b.id = 'tile-peek-bubble';
   const meta = c.s + (c.s === 1 ? ' stroke' : ' strokes') + (c.j ? ' · ' + c.j : '');
-  b.innerHTML = '<div class="peek-head"><div class="peek-m"></div><div class="peek-meta"></div></div>'
+  b.innerHTML = '<div class="peek-top"><div class="peek-char"></div><div class="peek-head"><div class="peek-m"></div><div class="peek-meta"></div></div></div>'
     + '<div class="peek-rd">' + peekReadings('ON', c.on) + peekReadings('KUN', c.kun) + '</div>';
+  b.querySelector('.peek-char').innerHTML = jpHtml(c.k);
   b.querySelector('.peek-m').textContent = c.m;
   b.querySelector('.peek-meta').textContent = meta;
   document.body.appendChild(b);
