@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no" class="notranslate">
 <head>
 <meta charset="UTF-8">
+<meta name="google" content="notranslate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kanji Cards</title>
 <meta name="theme-color" content="#0f0f0f">
@@ -93,6 +94,8 @@
     background: transparent; color: var(--text-muted); font-size: 15px; cursor: pointer;
   }
   .icon-btn:hover { border-color: var(--border-hover); color: var(--text); }
+  .head-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .icon-btn.muted { color: var(--text-dim); }
   main { flex: 1; display: flex; justify-content: center; padding: 1.5rem 1rem 3rem; }
   .screen { width: 100%; max-width: 480px; display: none; flex-direction: column; gap: 1rem; }
   .screen.visible { display: flex; }
@@ -225,6 +228,25 @@
      of any confidence tint, selected or not - deselecting always visibly
      clears it. */
   .tile.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: inset 0 0 0 2px var(--accent); }
+  /* Hold to peek (from the Japanese Drill app and Kanji Strokes): no iOS
+     copy/Look Up bubble or text selection while a tile is held. */
+  .tile { -webkit-touch-callout: none; -webkit-user-select: none; }
+  .tile.tile-peeking { border-color: var(--accent); }
+  /* Floats above (or beside) the held tile, since a finger covers the tile
+     itself. Never intercepts touches. */
+  .tile-peek-bubble {
+    position: fixed; z-index: 1000; pointer-events: none;
+    background: var(--surface); border: 2px solid var(--accent); border-radius: 12px;
+    padding: 10px 14px; text-align: center; width: max-content; max-width: min(82vw, 320px);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+  }
+  .peek-head { text-align: center; }
+  .peek-m { font-size: 15px; font-weight: 700; color: var(--accent); }
+  .peek-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .peek-rd { font-size: 14px; margin-top: 8px; text-align: left; line-height: 1.5; }
+  .peek-rd .lab { font-size: 11px; font-weight: 700; color: var(--text-dim); margin-right: 6px; }
+  .peek-rd .jp { font-family: 'BIZ UDPGothic', sans-serif; }
+  .peek-rd small { font-size: 12px; color: var(--text-muted); margin-left: 3px; }
 
   /* Drill */
   .progress-wrap { display: flex; align-items: center; gap: 12px; }
@@ -251,6 +273,7 @@
   .k-big { font-family: 'BIZ UDPGothic', sans-serif; font-size: 120px; line-height: 1.1; }
   .m-big { font-size: 34px; font-weight: 700; }
   .hint { font-size: 13px; color: var(--text-dim); margin-top: 1.25rem; }
+  .small-kana { font-size: 0.65em; }
   .front-hint:not(:empty) { margin-top: 1rem; }
   .front-hint .rd { justify-content: center; }
   .reveal-row { display: flex; gap: 8px; justify-content: center; }
@@ -312,12 +335,27 @@
   .setting.on .toggle::after { left: 21px; background: #0f0f0f; }
   .status { text-align: center; font-size: 12px; font-weight: 600; color: var(--accent); min-height: 16px; }
   .status.error { color: var(--red); }
+  .setting.static { cursor: default; }
+  .install-card { flex-direction: row; align-items: center; gap: 12px; }
+  .install-card[hidden] { display: none !important; }
+  .install-card .install-text { flex: 1; }
+  .install-card .install-why { margin-top: 4px; }
+  .install-btn { flex-shrink: 0; padding: 8px 16px; border-radius: 99px; border: 1px solid var(--accent); background: var(--accent-dim); color: var(--accent); font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .share-card { flex-direction: column; align-items: stretch; gap: 0.6rem; cursor: default; }
+  .share-qr { display: block; width: 168px; height: 168px; margin: 0.2rem auto 0; border-radius: 6px; }
+  .share-url { text-align: center; font-size: 12px; color: var(--text-dim); word-break: break-all; }
+  .share-divider { border-top: 1px solid var(--border); margin: 0.3rem 0 0.1rem; }
+  .share-link { display: block; text-decoration: none; color: inherit; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.6rem 0.75rem; }
+  .share-link .n { color: var(--accent); }
 </style>
 </head>
 <body>
 <header>
   <div class="app-heading"><span>漢字</span> cards</div>
-  <button class="icon-btn" id="gear" onclick="toggleSettings()" title="Settings" aria-label="Settings">⚙</button>
+  <div class="head-btns">
+    <button class="icon-btn" id="sound-btn" title="Sound" aria-label="Sound"></button>
+    <button class="icon-btn" id="gear" onclick="toggleSettings()" title="Settings" aria-label="Settings">⚙</button>
+  </div>
 </header>
 <main>
 
@@ -360,7 +398,6 @@
 
   <!-- Group: the familiar tile-selection screen, scoped to one group -->
   <div class="screen" id="screen-select">
-    <button class="btn" onclick="showHome()">← Home</button>
     <div class="title" id="group-title">Kanji Cards</div>
     <div class="sub" id="select-sub"></div>
     <div class="btn-row">
@@ -404,19 +441,42 @@
   <div class="screen" id="screen-settings">
     <div class="title">Settings</div>
     <div class="sub">Everything is stored on this device only.</div>
+    <!-- Install card: only shown when the app is open as a web page rather
+         than installed (see refreshInstallCard). Same as the Japanese Drill
+         app and Kanji Strokes. -->
+    <div class="setting static install-card" id="install-card" hidden>
+      <div class="install-text">
+        <div class="n">Install the app</div>
+        <div class="d" id="install-card-steps"></div>
+        <div class="d install-why">Installed, it opens full screen from its own icon and works offline.</div>
+      </div>
+      <button type="button" class="install-btn" id="install-btn" hidden>Install</button>
+    </div>
     <div class="setting" id="set-theme" onclick="toggleSetting('light')"><div><div class="n">Light theme</div><div class="d">Switches from the default dark look</div></div><div class="toggle"></div></div>
     <div class="setting" id="set-romaji" onclick="toggleSetting('showRomaji')"><div><div class="n">Show romaji</div><div class="d">Romaji under the readings and example words</div></div><div class="toggle"></div></div>
     <div class="setting" id="set-wordkanji" onclick="toggleSetting('showWordKanji')"><div><div class="n">Kanji in example words</div><div class="d">Off shows the kana only, for a harder recall</div></div><div class="toggle"></div></div>
-    <div class="setting" id="set-offline" onclick="toggleSetting('offline')"><div><div class="n">Work offline</div><div class="d">Keeps a copy on this device so it opens with no signal. Turn it on, then open the app once while you still have signal.</div></div><div class="toggle"></div></div>
     <div class="stack">
       <button class="btn" onclick="downloadBackup()">Download backup</button>
       <button class="btn" onclick="document.getElementById('restore-file').click()">Restore from backup</button>
       <input type="file" id="restore-file" accept="application/json,.json" style="display:none" onchange="restoreBackup(event)">
     </div>
+    <div class="setting static share-card" id="share-app-card">
+      <div><div class="n">Share this app</div><div class="d">Let a friend scan this to open the app on their phone</div></div>
+      <svg class="share-qr" viewBox="-2 -2 37 37" role="img" aria-label="QR code for this app" shape-rendering="crispEdges"><rect x="-2" y="-2" width="37" height="37" fill="#fff"/><path fill="#000" d="M0 0h7v1h-7zM8 0h6v1h-6zM15 0h5v1h-5zM21 0h3v1h-3zM26 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM9 1h1v1h-1zM11 1h2v1h-2zM14 1h1v1h-1zM16 1h2v1h-2zM20 1h1v1h-1zM26 1h1v1h-1zM32 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM9 2h1v1h-1zM12 2h1v1h-1zM15 2h1v1h-1zM17 2h2v1h-2zM20 2h3v1h-3zM26 2h1v1h-1zM28 2h3v1h-3zM32 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM9 3h2v1h-2zM12 3h1v1h-1zM14 3h1v1h-1zM22 3h1v1h-1zM24 3h1v1h-1zM26 3h1v1h-1zM28 3h3v1h-3zM32 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM8 4h2v1h-2zM11 4h1v1h-1zM13 4h1v1h-1zM16 4h3v1h-3zM21 4h1v1h-1zM23 4h1v1h-1zM26 4h1v1h-1zM28 4h3v1h-3zM32 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM11 5h2v1h-2zM15 5h3v1h-3zM22 5h1v1h-1zM26 5h1v1h-1zM32 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h1v1h-1zM24 6h1v1h-1zM26 6h7v1h-7zM13 7h1v1h-1zM16 7h1v1h-1zM18 7h1v1h-1zM21 7h4v1h-4zM1 8h7v1h-7zM10 8h2v1h-2zM13 8h2v1h-2zM17 8h1v1h-1zM22 8h3v1h-3zM27 8h2v1h-2zM32 8h1v1h-1zM0 9h2v1h-2zM9 9h1v1h-1zM12 9h2v1h-2zM18 9h4v1h-4zM23 9h1v1h-1zM26 9h2v1h-2zM29 9h2v1h-2zM32 9h1v1h-1zM0 10h2v1h-2zM3 10h4v1h-4zM9 10h4v1h-4zM14 10h1v1h-1zM18 10h1v1h-1zM21 10h2v1h-2zM24 10h3v1h-3zM28 10h1v1h-1zM30 10h2v1h-2zM1 11h1v1h-1zM4 11h2v1h-2zM11 11h1v1h-1zM13 11h2v1h-2zM16 11h1v1h-1zM20 11h2v1h-2zM23 11h4v1h-4zM28 11h3v1h-3zM0 12h1v1h-1zM4 12h5v1h-5zM11 12h2v1h-2zM14 12h3v1h-3zM18 12h2v1h-2zM22 12h1v1h-1zM24 12h1v1h-1zM27 12h3v1h-3zM31 12h1v1h-1zM2 13h4v1h-4zM7 13h3v1h-3zM11 13h1v1h-1zM13 13h2v1h-2zM21 13h3v1h-3zM26 13h1v1h-1zM31 13h2v1h-2zM0 14h1v1h-1zM3 14h2v1h-2zM6 14h1v1h-1zM9 14h1v1h-1zM11 14h1v1h-1zM13 14h2v1h-2zM16 14h3v1h-3zM20 14h1v1h-1zM25 14h2v1h-2zM30 14h2v1h-2zM1 15h3v1h-3zM5 15h1v1h-1zM8 15h1v1h-1zM11 15h2v1h-2zM16 15h6v1h-6zM25 15h6v1h-6zM1 16h2v1h-2zM6 16h1v1h-1zM10 16h1v1h-1zM14 16h2v1h-2zM17 16h3v1h-3zM22 16h2v1h-2zM25 16h1v1h-1zM27 16h3v1h-3zM32 16h1v1h-1zM0 17h2v1h-2zM5 17h1v1h-1zM7 17h1v1h-1zM10 17h2v1h-2zM13 17h1v1h-1zM16 17h8v1h-8zM26 17h2v1h-2zM29 17h4v1h-4zM2 18h1v1h-1zM6 18h6v1h-6zM13 18h1v1h-1zM18 18h1v1h-1zM24 18h5v1h-5zM30 18h2v1h-2zM2 19h1v1h-1zM4 19h2v1h-2zM9 19h5v1h-5zM16 19h1v1h-1zM20 19h2v1h-2zM25 19h7v1h-7zM1 20h2v1h-2zM6 20h4v1h-4zM14 20h1v1h-1zM17 20h2v1h-2zM22 20h1v1h-1zM24 20h2v1h-2zM27 20h3v1h-3zM32 20h1v1h-1zM0 21h4v1h-4zM7 21h4v1h-4zM13 21h1v1h-1zM17 21h3v1h-3zM21 21h1v1h-1zM23 21h2v1h-2zM26 21h1v1h-1zM29 21h2v1h-2zM32 21h1v1h-1zM0 22h1v1h-1zM3 22h4v1h-4zM9 22h4v1h-4zM14 22h1v1h-1zM16 22h1v1h-1zM18 22h1v1h-1zM24 22h1v1h-1zM27 22h5v1h-5zM0 23h1v1h-1zM8 23h2v1h-2zM12 23h3v1h-3zM18 23h1v1h-1zM20 23h2v1h-2zM23 23h3v1h-3zM28 23h5v1h-5zM0 24h1v1h-1zM4 24h1v1h-1zM6 24h4v1h-4zM13 24h1v1h-1zM15 24h2v1h-2zM18 24h3v1h-3zM22 24h1v1h-1zM24 24h5v1h-5zM32 24h1v1h-1zM8 25h1v1h-1zM11 25h2v1h-2zM14 25h1v1h-1zM16 25h1v1h-1zM19 25h2v1h-2zM24 25h1v1h-1zM28 25h1v1h-1zM30 25h1v1h-1zM32 25h1v1h-1zM0 26h7v1h-7zM8 26h4v1h-4zM13 26h4v1h-4zM21 26h1v1h-1zM23 26h2v1h-2zM26 26h1v1h-1zM28 26h1v1h-1zM30 26h2v1h-2zM0 27h1v1h-1zM6 27h1v1h-1zM8 27h2v1h-2zM11 27h2v1h-2zM15 27h1v1h-1zM18 27h1v1h-1zM20 27h5v1h-5zM28 27h5v1h-5zM0 28h1v1h-1zM2 28h3v1h-3zM6 28h1v1h-1zM8 28h2v1h-2zM11 28h1v1h-1zM14 28h1v1h-1zM16 28h1v1h-1zM22 28h1v1h-1zM24 28h6v1h-6zM31 28h1v1h-1zM0 29h1v1h-1zM2 29h3v1h-3zM6 29h1v1h-1zM8 29h2v1h-2zM12 29h3v1h-3zM16 29h1v1h-1zM19 29h2v1h-2zM25 29h1v1h-1zM28 29h1v1h-1zM30 29h1v1h-1zM32 29h1v1h-1zM0 30h1v1h-1zM2 30h3v1h-3zM6 30h1v1h-1zM8 30h1v1h-1zM10 30h2v1h-2zM13 30h1v1h-1zM15 30h1v1h-1zM18 30h1v1h-1zM21 30h1v1h-1zM23 30h1v1h-1zM26 30h2v1h-2zM0 31h1v1h-1zM6 31h1v1h-1zM8 31h2v1h-2zM11 31h1v1h-1zM13 31h2v1h-2zM20 31h3v1h-3zM28 31h1v1h-1zM30 31h1v1h-1zM0 32h7v1h-7zM10 32h1v1h-1zM12 32h1v1h-1zM17 32h1v1h-1zM19 32h2v1h-2zM22 32h4v1h-4zM27 32h1v1h-1zM31 32h1v1h-1z"/></svg>
+      <div class="share-url">andrewbrittle.github.io/ab-kcdrill</div>
+      <div class="share-divider"></div>
+      <a class="share-link" href="https://andrewbrittle.github.io/Japanese-drill-L3/" target="_blank" rel="noopener">
+        <div class="n">Japanese drill &rarr;</div>
+        <div class="d">Kana, kanji and vocab drilling for the Japanese course</div>
+      </a>
+      <a class="share-link" href="https://andrewbrittle.github.io/ab-kcdraw/" target="_blank" rel="noopener">
+        <div class="n">Kanji strokes &rarr;</div>
+        <div class="d">Practise writing hiragana, katakana and kanji stroke by stroke</div>
+      </a>
+    </div>
     <div class="status" id="status"></div>
-    <button class="btn" onclick="toggleSettings()">← Back</button>
     <div style="text-align:center; font-size:11px; color:var(--text-dim); margin-top:0.9rem; line-height:1.5;">Meanings and kanji data from KANJIDIC2, example words checked against JMdict — both © EDRDG, CC BY-SA 4.0.</div>
-    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.4rem;">v260925.001</div>
+    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.4rem;">v261016.001</div>
   </div>
 
 </main>
@@ -514,7 +574,7 @@ const SCORES_KEY = 'kanjiCardsScores';
 const SETTINGS_KEY = 'kanjiCardsSettings';
 let scores = {};
 try { scores = JSON.parse(localStorage.getItem(SCORES_KEY)) || {}; } catch (e) { scores = {}; }
-let settings = { light: false, showRomaji: true, showWordKanji: true, mode: 'kanji', study: false, showUntestedBar: false, offline: false };
+let settings = { light: false, showRomaji: true, showWordKanji: true, mode: 'kanji', study: false, showUntestedBar: false, soundOn: true };
 // Meaning->kanji mode is hidden for now (no reliable way to self-check a
 // mental image of a kanji against "got it right"), not removed - the pill
 // and its logic can come back later just by flipping this and re-adding the
@@ -522,6 +582,7 @@ let settings = { light: false, showRomaji: true, showWordKanji: true, mode: 'kan
 // branch on it, but nothing in the UI sets it to anything but 'kanji' now.
 const FEATURES = { meaningMode: false };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}); } catch (e) {}
+delete settings.offline; // offline is always on now (16 Oct 2026); drop any stale stored value so it can't come back
 function saveScores() { try { localStorage.setItem(SCORES_KEY, JSON.stringify(scores)); } catch (e) {} }
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {} }
 
@@ -578,48 +639,164 @@ function weightedSampleWithoutReplacement(items, n, weightFn) {
 }
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+/* ---------- Japanese text ----------
+   STANDING RULE: every piece of Japanese text goes onto the page through
+   jpHtml() / setJp(), never textContent or a raw innerHTML string. BIZ
+   UDPGothic draws small kana (っ ゃ ゅ ょ ぁ ぃ ぅ ぇ ぉ ゎ, ッ ャ ュ ョ ァ ィ ゥ ェ
+   ォ ヮ) almost full size, so ちょっと reads as chi-yo-tsu-to. The helper wraps
+   each one in <span class="small-kana"> (0.65em) and escapes the rest. Same
+   fix as the Japanese Drill app and Kanji Strokes. */
+const SMALL_KANA = new Set('ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ');
+const HTML_ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+function jpHtml(str) {
+  return Array.from(String(str), c => SMALL_KANA.has(c) ? '<span class="small-kana">' + c + '</span>' : (HTML_ESC[c] || c)).join('');
+}
+function setJp(el, str) { el.innerHTML = jpHtml(str); }
+const $ = id => document.getElementById(id);
+
 /* ---------- Screens ---------- */
-let lastScreen = 'select';
 function showScreen(id) {
+  hidePeekBubble();
+  navRecord(id);
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('visible'));
   document.getElementById('screen-' + id).classList.add('visible');
   document.getElementById('gear').style.color = id === 'settings' ? 'var(--accent)' : '';
-  if (id !== 'settings') lastScreen = id;
+  renderNavBack();
 }
 function toggleSettings() {
   const onSettings = document.getElementById('screen-settings').classList.contains('visible');
-  if (onSettings) showScreen(lastScreen);
-  else { showScreen('settings'); refreshSettingsUI(); }
+  if (onSettings) navBack();
+  else { refreshSettingsUI(); showScreen('settings'); }
 }
+
+/* ---------- navigation history ----------
+   Same scheme as the Japanese Drill app and Kanji Strokes. Every screen
+   change is recorded, so Back (the "← …" link at the top left of inner
+   pages, and the phone's back gesture) goes exactly one step up. Home is
+   the only main page: Back does nothing there, so the app can't be left by
+   accident. The drill and results screens are never stepped back INTO -
+   they're reached only by starting/finishing a drill - but Back pressed
+   WHILE in either of them still works, by reusing quitDrill()'s existing
+   "go back to wherever this drill was started from" logic (returnToScreen),
+   rather than the generic stack (which would have nothing useful on it).
+   Settings opened mid-drill or mid-results is the one case that DOES get a
+   stack entry, so Back from Settings returns to the drill/results screen
+   exactly as it was left. */
+var navStack = [], navCurrent = null, navGoingBack = false;
+const NAV_ROOTS = ['home'];
+const NAV_TRANSIENT = ['drill', 'results'];
+function navRecord(id) {
+  const vis = document.querySelector('.screen.visible');
+  const prev = navCurrent || (vis ? vis.id.replace(/^screen-/, '') : null);
+  navCurrent = id;
+  if (navGoingBack || !prev || prev === id) return;
+  if (NAV_ROOTS.includes(id)) { navStack = []; return; }
+  if (navStack.length && navStack[navStack.length - 1] === id) { navStack.pop(); return; }
+  if (NAV_TRANSIENT.includes(prev) && id !== 'settings') return;
+  navStack.push(prev);
+}
+// How to show each screen again when Back returns to it. drill/results only
+// re-show the screen (its card/results are already rendered and untouched);
+// leaving them is handled separately in navBack(), not through this table.
+const NAV_RESTORE = {
+  home: () => { showHome(); },
+  select: () => { refreshTiles(); showScreen('select'); },
+  drill: () => { showScreen('drill'); },
+  results: () => { showScreen('results'); },
+  settings: () => { refreshSettingsUI(); showScreen('settings'); },
+};
+function navBack() {
+  if (hidePeekBubble()) return;   // a bubble open? Back closes that first
+  if (navCurrent === 'drill' || navCurrent === 'results') { quitDrill(); renderNavBack(); return; }
+  if (!navStack.length && !NAV_ROOTS.includes(navCurrent)) navStack.push('home');   // safety net
+  if (!navStack.length) return;   // on home: do nothing
+  const target = navStack.pop();
+  navGoingBack = true;
+  try { (NAV_RESTORE[target] || NAV_RESTORE.home)(); } finally { navGoingBack = false; }
+  renderNavBack();
+}
+function navLabel(id) {
+  if (id === 'home') return 'Home';
+  if (id === 'select') return (($('group-title') || {}).textContent || '').trim().replace(/^Kanji Cards\s*·\s*/, '') || 'Cards';
+  if (id === 'drill') return 'Drill';
+  if (id === 'results') return 'Results';
+  if (id === 'settings') return 'Settings';
+  return 'Back';
+}
+const navTarget = () => navStack.length ? navStack[navStack.length - 1] : 'home';
+function renderNavBack() {
+  document.querySelectorAll('.nav-back').forEach(b => b.remove());
+  if (!navStack.length && NAV_ROOTS.includes(navCurrent)) return;
+  if (navCurrent === 'drill' || navCurrent === 'results') return;   // these leave via their own explicit buttons
+  const scr = document.getElementById('screen-' + navCurrent);
+  if (!scr) return;
+  let label = navLabel(navTarget());
+  if (label.length > 30) label = label.slice(0, 28).trim() + '…';
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'btn nav-back'; b.textContent = '← ' + label; b.onclick = navBack;
+  scr.insertBefore(b, scr.firstChild);
+}
+// The phone's back gesture or button: one step back in the app; on home it
+// does nothing. History is kept one entry deep and re-armed each time.
+history.pushState({ trap: true }, '');
+window.addEventListener('popstate', () => { history.pushState({ trap: true }, ''); navBack(); });
 function applyTheme() { document.documentElement.setAttribute('data-theme', settings.light ? 'light' : 'dark'); }
 function refreshSettingsUI() {
   document.getElementById('set-theme').classList.toggle('on', settings.light);
   document.getElementById('set-romaji').classList.toggle('on', settings.showRomaji);
   document.getElementById('set-wordkanji').classList.toggle('on', settings.showWordKanji);
-  document.getElementById('set-offline').classList.toggle('on', settings.offline);
+  refreshInstallCard();
 }
+
+/* ---------- install card ----------
+   Same as the Japanese Drill app and Kanji Strokes. A browser reports
+   whether the page is running as an installed home-screen app; when it
+   isn't, Settings shows how to install it on this device. Android and
+   desktop Chrome offer their own install prompt (beforeinstallprompt), so
+   there the card gets an Install button. */
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstallPrompt = e; refreshInstallCard(); });
+window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; refreshInstallCard(); });
+function appIsInstalled() {
+  try {
+    return ['standalone', 'fullscreen', 'minimal-ui'].some(m => window.matchMedia('(display-mode: ' + m + ')').matches) || window.navigator.standalone === true;
+  } catch (e) { return false; }
+}
+function refreshInstallCard() {
+  const card = $('install-card');
+  if (!card) return;
+  if (appIsInstalled() || location.protocol === 'file:') { card.hidden = true; return; }
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);   // iPadOS says it's a Mac
+  const android = /Android/.test(ua);
+  let steps;
+  if (ios) steps = 'Tap the Share button (the square with an arrow, at the bottom in Safari or top right in Chrome), scroll down and tap <strong>Add to Home Screen</strong>, then Add.';
+  else if (android && deferredInstallPrompt) steps = 'Tap <strong>Install</strong>, or use the browser menu (⋮) → Install app.';
+  else if (android) steps = 'In Chrome, tap the menu (⋮) at the top right, then <strong>Install app</strong> or <strong>Add to Home screen</strong>.';
+  else if (deferredInstallPrompt) steps = 'Click <strong>Install</strong>, or use the install icon at the right of the address bar.';
+  else steps = 'On a phone, open this page and use the browser\'s Add to Home Screen. On a computer, look for an install icon at the right of the address bar (Chrome or Edge).';
+  $('install-card-steps').innerHTML = steps;
+  $('install-btn').hidden = !deferredInstallPrompt;
+  card.hidden = false;
+}
+if ($('install-btn')) $('install-btn').onclick = () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.finally(() => { deferredInstallPrompt = null; refreshInstallCard(); });
+};
 function toggleSetting(key) {
   settings[key] = !settings[key];
   saveSettings(); applyTheme(); refreshSettingsUI();
-  if (key === 'offline') syncServiceWorker();
 }
 /* ---------- Offline (service worker) ----------
-   Opt-in, off by default - see the Settings toggle copy. Registers/
-   unregisters sw.js to match settings.offline; called here and once at
-   startup (bottom of this script) so a stray registration from a previous
-   session gets cleaned up even if it somehow ended up out of sync with the
-   setting. Turning it off actively unregisters *and* clears this app's own
-   caches (kanji-cards- prefix), rather than leaving a stale worker running
-   unmanaged - it never touches another app's caches even if they're ever
-   served from the same origin. */
+   Offline is always on (16 Oct 2026, as in the other apps; the "Work
+   offline" switch was removed). Safe because sw.js is network-first: with
+   signal you always get the newest version, and the saved copy is only used
+   without it. Only in the real app, not the artifact preview, which has no
+   sw.js. */
 function syncServiceWorker() {
   if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
-  if (settings.offline) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  } else {
-    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister())).catch(() => {});
-    if (window.caches) caches.keys().then(ns => ns.filter(n => n.startsWith('kanji-cards-')).forEach(n => caches.delete(n))).catch(() => {});
-  }
+  navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
 /* ---------- Study toggle ----------
@@ -969,8 +1146,13 @@ function makeTileGrid(cards) {
     const t = document.createElement('div');
     t.className = 'tile';
     t.dataset.n = c.n;
-    t.innerHTML = '<div class="tk">' + esc(c.k) + '</div><div class="tm">' + esc(c.m.split(/[;,]/)[0]) + '</div>';
-    t.onclick = () => toggleTile(c.n);
+    t.innerHTML = '<div class="tk">' + jpHtml(c.k) + '</div><div class="tm">' + esc(c.m.split(/[;,]/)[0]) + '</div>';
+    // This is the pick-which-cards-to-drill screen, not the flashcard/quiz
+    // screen - seeing the meaning here doesn't give away a drill answer -
+    // so holding a tile for a peek is safe here. Never attach this to the
+    // card face in the drill itself.
+    t.onclick = () => { if (peekSwallowed()) return; toggleTile(c.n); };
+    attachPeek(t, c);
     tiles.appendChild(t);
   });
   return tiles;
@@ -1030,6 +1212,140 @@ function refreshTiles() {
   randomBtn.classList.toggle('active', randomMode);
   randomBtn.textContent = randomMode ? 'Deselect all' : 'Random 20';
 }
+
+/* ---------- sound ----------
+   Same as the Japanese Drill app and Kanji Strokes: the header's speaker
+   button switches every sound on or off (for now that's hold-to-peek
+   reading the kanji's readings out). Uses the phone's own Japanese voice,
+   so how it sounds depends on the phone. */
+const SPEECH_SUPPORTED = ('speechSynthesis' in window);
+const soundAllowed = () => SPEECH_SUPPORTED && settings.soundOn !== false;
+// iPhone/iPad: Safari ignores speech that doesn't start inside a tap, and
+// peek speaks from a timer. One silent utterance during the first real tap
+// unlocks speech for the rest of the visit.
+let speechUnlocked = false;
+function unlockSpeech() {
+  if (speechUnlocked || !soundAllowed()) return;
+  speechUnlocked = true;
+  try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+}
+if (SPEECH_SUPPORTED) ['touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, unlockSpeech, { capture: true, passive: true }));
+function speakJapanese(text) {
+  if (!soundAllowed() || !text) return;
+  unlockSpeech();
+  if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ja-JP'; u.rate = 0.85;
+  const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith('ja'));
+  if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+const SOUND_ICON_ON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 9 8 9 12 5 12 19 8 15 3 15" fill="currentColor"></polygon><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg>';
+const SOUND_ICON_OFF = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 9 8 9 12 5 12 19 8 15 3 15" fill="currentColor"></polygon><line x1="16" y1="9" x2="22" y2="15"></line><line x1="22" y1="9" x2="16" y2="15"></line></svg>';
+function updateSoundButton() {
+  const b = $('sound-btn');
+  if (!SPEECH_SUPPORTED) { b.hidden = true; return; }
+  const on = soundAllowed();
+  b.innerHTML = on ? SOUND_ICON_ON : SOUND_ICON_OFF;
+  b.classList.toggle('muted', !on);
+  b.title = on ? 'Sound on - tap to mute' : 'Sound off - tap to turn on';
+  b.setAttribute('aria-label', b.title);
+}
+$('sound-btn').onclick = () => {
+  settings.soundOn = settings.soundOn === false;
+  saveSettings();
+  if (!settings.soundOn && SPEECH_SUPPORTED) speechSynthesis.cancel();
+  updateSoundButton();
+};
+// What to say for a kanji: up to two on and two kun readings (the kanji on
+// its own is ambiguous), stripped of the parens/okurigana punctuation shown
+// on screen, joined the way a dictionary would read them out.
+function speechFor(c) {
+  const plain = r => r[0].replace(/[().\-]/g, '');
+  return [...(c.on || []).slice(0, 2), ...(c.kun || []).slice(0, 2)].map(plain).join('、');
+}
+
+/* ---------- hold to peek ----------
+   From the Japanese Drill app and Kanji Strokes. Hold a tile on the
+   selection screen and a bubble shows its meaning, stroke count, JLPT level
+   and on/kun readings, and reads it out. Letting go closes it. A finger
+   that starts moving is a scroll, which cancels the hold; the tap that
+   follows a peek is swallowed so it doesn't also select the tile. Cards has
+   no stroke-order data (that's Kanji Strokes' job), so unlike the sister
+   apps' peek bubble this one doesn't draw the character being written. */
+const PEEK_HOLD_MS = 450;
+const PEEK_MOVE_TOLERANCE = 16;   // px of finger wobble allowed before the bubble appears
+let peekSuppressClickUntil = 0;
+const peekSwallowed = () => Date.now() < peekSuppressClickUntil;
+function peekReadings(lab, list) {
+  if (!list || !list.length) return '';
+  return '<div><span class="lab">' + lab + '</span>' + list.slice(0, 3).map(([kana, rom]) =>
+    '<span class="jp">' + jpHtml(kana) + '</span><small>' + jpHtml(rom) + '</small>').join('　') + '</div>';
+}
+function showPeekBubble(tile, c) {
+  hidePeekBubble();
+  const b = document.createElement('div');
+  b.className = 'tile-peek-bubble'; b.id = 'tile-peek-bubble';
+  const meta = c.s + (c.s === 1 ? ' stroke' : ' strokes') + (c.j ? ' · ' + c.j : '');
+  b.innerHTML = '<div class="peek-head"><div class="peek-m"></div><div class="peek-meta"></div></div>'
+    + '<div class="peek-rd">' + peekReadings('ON', c.on) + peekReadings('KUN', c.kun) + '</div>';
+  b.querySelector('.peek-m').textContent = c.m;
+  b.querySelector('.peek-meta').textContent = meta;
+  document.body.appendChild(b);
+  // Above the tile if it fits, else beside it on the roomier side, else below; always on screen.
+  const r = tile.getBoundingClientRect(), bw = b.offsetWidth, bh = b.offsetHeight;
+  const vw = window.innerWidth, vh = window.innerHeight, gap = 10, m = 8;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  let left, top;
+  if (r.top - gap - bh >= m) { top = r.top - gap - bh; left = clamp(r.left + r.width / 2 - bw / 2, m, vw - bw - m); }
+  else {
+    const roomRight = vw - r.right - gap - m, roomLeft = r.left - gap - m;
+    if (Math.max(roomRight, roomLeft) >= Math.min(bw, 160)) {
+      left = clamp(roomRight >= roomLeft ? r.right + gap : r.left - gap - bw, m, vw - bw - m);
+      top = clamp(r.top, m, vh - bh - m);
+    } else { top = clamp(r.bottom + gap, m, vh - bh - m); left = clamp(r.left + r.width / 2 - bw / 2, m, vw - bw - m); }
+  }
+  b.style.left = left + 'px'; b.style.top = top + 'px';
+}
+function hidePeekBubble() {
+  const old = $('tile-peek-bubble');
+  if (old) { old.remove(); return true; }
+  return false;
+}
+function attachPeek(tile, c) {
+  let timer = null, peeking = false, startX = 0, startY = 0, pointerId = null;
+  const begin = () => {
+    timer = null; peeking = true;
+    tile.classList.add('tile-peeking');
+    showPeekBubble(tile, c);
+    peekSuppressClickUntil = Date.now() + 1000;
+    speakJapanese(speechFor(c));
+  };
+  const end = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (!peeking) return;
+    peeking = false;
+    tile.classList.remove('tile-peeking');
+    hidePeekBubble();
+    peekSuppressClickUntil = Date.now() + 400;
+  };
+  // Once the bubble is showing, only lifting the finger closes it: the
+  // pointer is captured and touchmove blocked, so the page can't scroll.
+  tile.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    startX = e.clientX; startY = e.clientY; pointerId = e.pointerId;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => { try { tile.setPointerCapture(pointerId); } catch (err) {} begin(); }, PEEK_HOLD_MS);
+  });
+  tile.addEventListener('pointermove', e => {
+    if (timer && (Math.abs(e.clientX - startX) > PEEK_MOVE_TOLERANCE || Math.abs(e.clientY - startY) > PEEK_MOVE_TOLERANCE)) { clearTimeout(timer); timer = null; }
+  });
+  tile.addEventListener('touchmove', e => { if (peeking && e.cancelable) e.preventDefault(); }, { passive: false });
+  ['pointerup', 'pointercancel'].forEach(ev => tile.addEventListener(ev, end));
+  tile.addEventListener('pointerleave', () => { if (!peeking) end(); });
+  tile.addEventListener('contextmenu', e => e.preventDefault());
+}
+
 function toggleTile(n) {
   if (randomMode) return; // backstop - tiles are also pointer-events:none while disguised
   selected.has(n) ? selected.delete(n) : selected.add(n);
@@ -1085,15 +1401,15 @@ function quitDrill() {
 
 function wordsHtml(c) {
   return c.w.map(w => {
-    const kanji = (settings.showWordKanji && w.kanji) ? '<span class="wk">' + esc(w.kanji) + '</span>' : '';
+    const kanji = (settings.showWordKanji && w.kanji) ? '<span class="wk">' + jpHtml(w.kanji) + '</span>' : '';
     const rom = settings.showRomaji ? '<div class="wr">' + esc(w.romaji) + '</div>' : '';
     const bonus = w.bonus ? '<span class="bonus" title="Bonus word - not in the book">bonus</span>' : '';
-    return '<div class="word"><div><div class="wj">' + kanji + esc(w.jp) + bonus + '</div>' + rom + '</div><div class="we">' + esc(w.en) + '</div></div>';
+    return '<div class="word"><div><div class="wj">' + kanji + jpHtml(w.jp) + bonus + '</div>' + rom + '</div><div class="we">' + esc(w.en) + '</div></div>';
   }).join('');
 }
 function readingsHtml(list, cls) {
   if (!list.length) return '<div class="none">none listed</div>';
-  return '<div class="rd">' + list.map(r => '<span class="rd-item ' + cls + '">' + esc(r[0]) + (settings.showRomaji ? '<small>' + esc(r[1]) + '</small>' : '') + '</span>').join('') + '</div>';
+  return '<div class="rd">' + list.map(r => '<span class="rd-item ' + cls + '">' + jpHtml(r[0]) + (settings.showRomaji ? '<small>' + esc(r[1]) + '</small>' : '') + '</span>').join('') + '</div>';
 }
 // includeWords is deliberately a separate step in kanji/meaning modes (see
 // renderControls) - example words were getting glossed over between reveal
@@ -1106,7 +1422,7 @@ function jlptTagHtml(c) {
   return '<span class="jlpt-tag' + hard + '">' + c.j + '</span>';
 }
 function backHtml(c, includeWords) {
-  return '<div class="back-head"><div class="k-mid">' + esc(c.k) + '</div><div><div class="m">' + esc(c.m) + '</div><div class="strokes">' + c.s + ' stroke' + (c.s === 1 ? '' : 's') + jlptTagHtml(c) + '</div></div></div>' +
+  return '<div class="back-head"><div class="k-mid">' + jpHtml(c.k) + '</div><div><div class="m">' + esc(c.m) + '</div><div class="strokes">' + c.s + ' stroke' + (c.s === 1 ? '' : 's') + jlptTagHtml(c) + '</div></div></div>' +
     '<div class="sec"><div class="sec-t">On\'yomi</div>' + readingsHtml(c.on, 'on') + '</div>' +
     '<div class="sec"><div class="sec-t">Kun\'yomi</div>' + readingsHtml(c.kun, 'kun') + '</div>' +
     (includeWords ? '<div class="sec"><div class="sec-t">Words</div>' + wordsHtml(c) + '</div>' : '');
@@ -1127,7 +1443,7 @@ function renderCard() {
   card.classList.toggle('repeat', requeued.has(deck[pos]));
   if (flipped) card.innerHTML = backHtml(c, wordsShown);
   else if (settings.mode === 'meaning') card.innerHTML = '<div class="front"><div class="m-big">' + esc(c.m) + '</div><div class="front-hint" id="front-hint"></div><div class="hint">' + c.s + ' stroke' + (c.s === 1 ? '' : 's') + ' · which kanji? · tap to reveal</div></div>';
-  else card.innerHTML = '<div class="front"><div class="k-big">' + esc(c.k) + '</div><div class="front-hint" id="front-hint"></div><div class="hint">tap to reveal</div></div>';
+  else card.innerHTML = '<div class="front"><div class="k-big">' + jpHtml(c.k) + '</div><div class="front-hint" id="front-hint"></div><div class="hint">tap to reveal</div></div>';
   renderControls();
   window.scrollTo(0, 0);
 }
@@ -1215,7 +1531,7 @@ function showResults() {
   const el = document.getElementById('res-missed');
   const btn = document.getElementById('res-missed-btn');
   if (missedList.length) {
-    el.innerHTML = '<div class="missed-chars">' + missedList.map(n => esc(BY_NUM[n].k)).join(' ') + '</div>';
+    el.innerHTML = '<div class="missed-chars">' + missedList.map(n => jpHtml(BY_NUM[n].k)).join(' ') + '</div>';
     btn.style.display = '';
   } else {
     el.innerHTML = '<div class="ok">No misses this round.</div>';
@@ -1279,6 +1595,7 @@ function restoreBackup(event) {
 /* ---------- Init ---------- */
 applyTheme();
 refreshStudyToggle();
+updateSoundButton();
 syncServiceWorker();
 initApp();
 </script>

@@ -1,6 +1,6 @@
-// Kanji Cards service worker - opt-in offline support (see the "Work
-// offline" setting in the app; syncServiceWorker() in index.html registers
-// and unregisters this to match that toggle).
+// Kanji Cards service worker - offline is always on (16 Oct 2026, as in the
+// other apps). syncServiceWorker() in index.html always registers this on
+// load; there is no "Work offline" setting any more.
 //
 // Strategy: network-first with a 3-second timeout, falling back to the
 // cache. Each file is cached separately (not via cache.addAll(), so one
@@ -15,7 +15,7 @@
 // drill app, Kanji Strokes) each use their own prefix, so if they're ever
 // served from the same origin, one app's cache cleanup can never delete
 // another's.
-const CACHE_VERSION = 'kanji-cards-v260925-001';
+const CACHE_VERSION = 'kanji-cards-v261016-001';
 const PRECACHE_URLS = [
   './',
   'index.html',
