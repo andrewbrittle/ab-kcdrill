@@ -15,10 +15,12 @@
 // drill app, Kanji Strokes) each use their own prefix, so if they're ever
 // served from the same origin, one app's cache cleanup can never delete
 // another's.
-const CACHE_VERSION = 'kanji-cards-v261016-002';
+const CACHE_VERSION = 'kanji-cards-v261018-002';
 const PRECACHE_URLS = [
   './',
   'index.html',
+  'instructions.html',
+  'changelog.html',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png',

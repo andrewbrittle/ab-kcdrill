@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en" translate="no" class="notranslate">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Instructions — Kanji Cards</title>
+<style>
+  :root {
+    --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #242424;
+    --text: #f8f6f2; --text-muted: rgba(248,246,242,0.66); --text-dim: rgba(248,246,242,0.42);
+    --accent: #e8c97a; --accent-dim: rgba(232,201,122,0.12);
+    --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.16);
+  }
+  :root[data-theme="light"] {
+    --bg: #f7f5f0; --surface: #ffffff; --surface2: #efece4;
+    --text: #1a1a1a; --text-muted: rgba(26,26,26,0.66); --text-dim: rgba(26,26,26,0.45);
+    --accent: #a9740f; --accent-dim: rgba(169,116,15,0.12);
+    --border: rgba(0,0,0,0.10); --border-hover: rgba(0,0,0,0.20);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 20px 64px; }
+  .back-link {
+    display: inline-block; font-size: 13px; font-weight: 600; color: var(--text-muted);
+    text-decoration: none; border: 1px solid var(--border); border-radius: 99px;
+    padding: 6px 14px; margin-bottom: 20px;
+  }
+  .back-link:hover { border-color: var(--border-hover); color: var(--text); }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h1 span { color: var(--accent); }
+  .byline { font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 18px; }
+  .intro { font-size: 15px; color: var(--text-muted); margin-bottom: 32px; }
+  h2 {
+    font-size: 17px; color: var(--accent); border-top: 1px solid var(--border);
+    padding-top: 24px; margin: 32px 0 12px;
+  }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  h3 { font-size: 15px; color: var(--text); margin: 20px 0 8px; }
+  p { font-size: 14.5px; color: var(--text-muted); margin: 0 0 12px; }
+  .setting {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 8px;
+  }
+  .setting-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .setting-desc { font-size: 13.5px; color: var(--text-muted); }
+  ul { margin: 0 0 12px; padding-left: 20px; }
+  li { font-size: 14.5px; color: var(--text-muted); margin-bottom: 4px; }
+  .note {
+    font-size: 13px; color: var(--text-dim); background: var(--surface2);
+    border-radius: 8px; padding: 8px 12px; margin: 10px 0 16px;
+  }
+  .footer { margin-top: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="./index.html">← Back to the app</a>
+
+  <h1>How <span>Kanji Cards</span> works</h1>
+  <div class="byline">Andrew Brittle, 2026</div>
+  <p class="intro">
+    A flashcard-style companion to the Japanese Drill app, just for the 500 most
+    common kanji. Each card shows a kanji along with its readings and a few example
+    words, and the app keeps track of how well you know each one so it can bring
+    the weak ones back round more often.
+  </p>
+
+  <h2>Getting started</h2>
+  <p>
+    From the home screen you can jump straight into <strong>Random 20</strong> (a fresh
+    random draw each time), <strong>Weakest 20</strong> (the cards you've scored lowest
+    on), or <strong>Untested 20</strong> (cards you haven't seen yet). All three start a
+    drill of up to 20 cards.
+  </p>
+  <p>
+    "Or browse a group" lets you pick exactly which cards to study instead — by their
+    position <strong>In order</strong> (1–100, 101–200, and so on), <strong>By part</strong>
+    (kanji grouped by a shared radical or component), or <strong>By JLPT</strong> level
+    (N5 through N1). Tap a group to open a grid of tiles; tap tiles to select cards, or
+    use "Select all" / "Random 20" on that screen, then Start.
+  </p>
+  <p>You can also search by meaning — type a word like "dog" or "write" and it finds any
+    card whose meaning matches.</p>
+
+  <h2>Studying a card</h2>
+  <p>
+    Each card shows the kanji, its on'yomi and kun'yomi readings, and a few example
+    words using it. Work through the deck one card at a time; how you answer feeds the
+    scoring that decides which cards count as "weak".
+  </p>
+  <div class="setting">
+    <div class="setting-name">Study mode</div>
+    <div class="setting-desc">Everything visible at once, no scoring — for a first look at
+      a new batch of cards before testing yourself on them.</div>
+  </div>
+  <p>On any tile grid (browsing a group, or the results screen), hold a tile down for about
+    half a second to peek at that card's kanji, reading and meaning without opening it
+    properly — useful for a quick check mid-session. Lift your finger to close the peek.</p>
+
+  <h2>Settings</h2>
+  <div class="setting">
+    <div class="setting-name">Light theme</div>
+    <div class="setting-desc">Switches from the default dark look.</div>
+  </div>
+  <div class="setting">
+    <div class="setting-name">Show romaji</div>
+    <div class="setting-desc">Romaji under the readings and example words.</div>
+  </div>
+  <div class="setting">
+    <div class="setting-name">Kanji in example words</div>
+    <div class="setting-desc">Off shows the kana only, for a harder recall.</div>
+  </div>
+  <p>The sound button (top right, next to the gear) turns spoken readings on or off
+    everywhere in the app, including the peek bubble.</p>
+
+  <h2>Backup and restore</h2>
+  <p>Your scores live only on this device's browser storage, so they don't survive a
+    browser-data clear or a new phone on their own. Use <strong>Download backup</strong>
+    in Settings to save a small file with your progress, and <strong>Restore from
+    backup</strong> to load one back in — on this device or a new one.</p>
+
+  <h2>Installing</h2>
+  <p>Add the app to your home screen (Settings shows the exact steps for your device)
+    and it opens full screen like a normal app, and keeps working offline.</p>
+
+  <div class="note">Kanji and meaning data is from KANJIDIC2; example words are checked
+    against JMdict. Both © EDRDG, CC BY-SA 4.0.</div>
+
+  <div class="footer">
+    <a class="back-link" href="./index.html">← Back to the app</a>
+  </div>
+</div>
+<script>
+  // Match whichever theme the app itself is currently set to, since this page
+  // shares localStorage with index.html on the same origin.
+  try {
+    const s = JSON.parse(localStorage.getItem('kanjiCardsSettings') || '{}');
+    if (s.light) document.documentElement.setAttribute('data-theme', 'light');
+  } catch (e) {}
+</script>
+</body>
+</html>
