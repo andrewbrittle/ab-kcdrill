@@ -6,35 +6,31 @@ back up. Keep this updated alongside the app, not as an afterthought.
 ## What this is
 
 No build step, no dependencies beyond the browser. A spaced-repetition-style
-kanji flashcard drill app. Originally digitised from the Tuttle *Japanese
-Kanji for Beginners* textbook; as of 2026-09-25 it's been moved onto a
-**shared 500-kanji master list** that it now has in common with the Kanji
-Strokes companion app (see "The 500-kanji master list" below) — the book is
-no longer the source of truth for anything. Deliberately kept separate from
+kanji flashcard drill app, built on a **shared 500-kanji master list** that
+it has in common with the Kanji Strokes companion app (see "The 500-kanji
+master list" below). The set doesn't follow any textbook. Deliberately kept separate from
 the main Japanese-drill-L2 app rather than merged into it — different scope,
 different pace.
 
-Hosted on GitHub Pages as a public repo. It used to encrypt the card data at
-rest because the book's own wording (meanings, example sentences) was
-copyrighted textbook content; that's no longer true (see "Encryption
-removed" below), so the data now sits in the file as plain, readable JSON.
+Hosted on GitHub Pages as a public repo. All card data is openly licensed
+(meanings from KANJIDIC2, example words from JMdict), so it sits in the file
+as plain, readable JSON.
 
 ## The 500-kanji master list
 
 As of 2026-09-25, kanji-cards and Kanji Strokes are both built from the same
 source list, handed over from the Strokes chat as `kanji-master.csv` (500
-rows, one per kanji). What changed from the old 430-book-card scheme:
+rows, one per kanji). What changed from the earlier 430-card version:
 
-- **Meanings** now come from KANJIDIC2 (EDRDG, CC BY-SA 4.0), not the book's
-  own wording — so `m` no longer traces back to the textbook at all.
+- **Meanings** come from KANJIDIC2 (EDRDG, CC BY-SA 4.0).
 - **々 was removed** (a repetition mark, not a kanji) — its old card number,
   35, is gone. Any pre-existing local score for id 35 gets silently pruned
   on first load after updating (see `initApp()`).
-- **71 kanji were added** to reach exactly 500, covering N4 kanji the book
-  skipped plus common everyday kanji. Their card ids are 431–501.
+- **71 kanji were added** to reach exactly 500, covering more N4 kanji
+  plus common everyday kanji. Their card ids are 431–501.
 - Two id concepts now exist, and it matters which one code uses where:
-  - `n` — the **permanent card id**. Book kanji keep their original book
-    number (1–430, minus 35); added kanji are 431–501. **Never renumber
+  - `n` — the **permanent card id**. The original kanji keep their old ids
+    (1–430, minus 35); added kanji are 431–501. **Never renumber
     this** — `scores` in localStorage is keyed by it.
   - `d` — the **display position**, 1–500, contiguous. This is what
     grouping, sorting, block labels and any "#" shown to the user should
@@ -46,12 +42,11 @@ rows, one per kanji). What changed from the old 430-book-card scheme:
   `build_cards.py` in scratchpad, not committed — worth adding to the repo)
   if the master list ever changes again, rather than hand-editing cards.
 
-## Example words — regenerated from JMdict, not the book
+## Example words — from JMdict
 
 As of 2026-09-25, **every** card's example words (all 500, not just the 71
 new ones) were regenerated from scratch and checked against JMdict (EDRDG,
-CC BY-SA 4.0) — nothing from the book's own example sentences remains
-anywhere. Andrew's call: rather than keep the old book-sourced words for the
+CC BY-SA 4.0). Andrew's call: rather than keep the old words for the
 429 existing cards and only source fresh ones for the 71 new cards, do the
 full 500 in one pass so the whole deck is consistent and nothing is left
 half-migrated.
@@ -86,10 +81,8 @@ card array from `kanji-master.csv` + the verified words).
 As of 2026-09-25, encryption is gone entirely — no unlock screen,
 no passphrase, no `crypto.subtle`, no `ENCRYPTED_CARDS`. `KANJI_CARDS` is
 now a plain `const` array baked straight into `index.html`. Rationale:
-encryption existed only to keep the book's own copyrighted wording out of
-search-indexable text in a public repo; with meanings now from KANJIDIC2 and
-example words from JMdict, nothing traceable to the book remains, so there
-was nothing left worth hiding. This matches what Kanji Strokes already does.
+with meanings from KANJIDIC2 and example words from JMdict, everything is
+openly licensed, so there is nothing to hide. This matches what Kanji Strokes already does.
 
 If old browser storage still has a `kanjiCardsDecryptedV1` cache key from
 before this change, it's simply unused now — nothing reads or writes it any
@@ -192,8 +185,8 @@ Each card:
   ]
 }
 ```
-The `bonus` flag on word entries (marking a word not in the book) is dead
-now that nothing comes from the book - no current card sets it, but
+The `bonus` flag on word entries (an "extra example word" marker from an
+earlier version) is dead - no current card sets it, but
 `wordsHtml()` still checks for it harmlessly. Fine to remove if it's ever
 confusing.
 
@@ -252,7 +245,7 @@ words checked against JMdict — both © EDRDG, CC BY-SA 4.0.*
 app's card data and cross-check it against the main app's
 `kanjiReadingBlocked` entries. **It needs rework** now that there's nothing
 to decrypt and the id scheme has changed (429→500 cards, `n` no longer
-matches "book card number" 1:1 for every card) — don't trust it as-is until
+matches the old card number 1:1 for every card) — don't trust it as-is until
 that's done.
 
 **Edits to the main app's `index.html` should go through its own separate
@@ -325,22 +318,49 @@ Japanese Drill app. Six things ported in:
   never to the drill/flashcard face itself — that would give the answer
   away mid-quiz.
 
-**Not carried over, flagged for Andrew:** section 7 of the handover
-(instructions page + changelog wording) assumes an in-app "How this works"
-page and a `changelog.html`, the way the Drill app and Strokes have — Cards
-has neither right now. Nothing was invented to fill that gap; worth a
-separate decision whether Cards wants one, rather than bolting on new UI
-chrome as a side effect of this pass.
+## Brought in line with the other two apps again (2026-10-18)
+
+A second cross-app handover arrived, this time written by the Japanese
+Drill app after Andrew asked it to audit all three side by side
+(`HANDOVER-from-japanese-app-consistency.md`). Cards had five items on its
+list (items 1/2 were Strokes-only):
+
+- **Search box restyle (item 3).** The 🔍-inside-the-pill search button is
+  now a clear (×) inside the pill, shown once there's text, plus a
+  separate round search button outside — same layout the Japanese app
+  moved to on 13 October so there's a quick way to empty the box.
+  `.search-pill`/`.search-input`/`.search-btn` renamed to
+  `.vocab-search-pill`/`.vocab-search-input`/`.vocab-search-btn` to match;
+  `syncSearchClear()`/`clearSearch()` added.
+- **"Weak 20" → "Weakest 20" (item 4).** Just the button label and the
+  `labels` object in `refreshHomePoolUI()` — the internal `'weak'` pool
+  identifier is unchanged, so nothing else needed touching.
+- **Settings footer reorder + contact line (items 5/6).** Now reads
+  contact line (gold, 12px) → data credit (dim, 11px) → version (dim,
+  bold, 12px), the same order as the other two apps. The contact line
+  ("Any problems: Andrew 07973 835165") is new to Cards.
+- **Instructions + changelog pages, green cog (item 7 — resolved, was
+  flagged below as not carried over on 16 October).** Added
+  `instructions.html` and `changelog.html`, written fresh for Cards' own
+  features (not copied from the Japanese app's, which covers a much bigger
+  app). Settings now has two pill links at the top, "How this app works →"
+  and "What's new →", both opening in a new tab. `LATEST_CHANGELOG_ENTRY`
+  (`index.html`) + `settings.lastSeenChangelog` light the ⚙ green
+  (`.icon-btn.has-update`) until Settings is opened, which also flashes the
+  "What's new" link green for that one visit — same mechanism as the
+  Japanese app, adapted to Cards' own `.icon-btn` class (the handover's
+  snippet assumed `.settings-btn`, which is what the Japanese app and
+  Strokes call it, not Cards). Both pages added to `sw.js`'s precache list.
+
+Tested at 360px wide in both themes, per the handover's instruction.
+`v261018.002` / `kanji-cards-v261018-002`.
 
 ## History
 
-- Originally transcribed from `JK4B_Flashcard_Front.pdf` /
-  `JK4B_Flashcard_Back.pdf` (Tuttle *Japanese Kanji for Beginners*, 29
-  pages, 15 cards per page except the last) — 430 cards, transcription
-  completed across several sessions.
+- Started as a 430-card set.
 - 2026-09-24: converted from a single `kanji-cards.html` file to a proper
   installable folder-based PWA (see "File layout" above); grouping moved
-  from book pages to card-number blocks; added the by-part browsing mode.
+  to card-number blocks; added the by-part browsing mode.
 - 2026-09-25: moved onto the shared 500-kanji master list with Kanji
   Strokes (meanings from KANJIDIC2, 71 kanji added, 々 removed); all 500
   cards' example words regenerated from JMdict; encryption removed
@@ -352,3 +372,15 @@ chrome as a side effect of this pass.
   + share cards with an inline QR code, a proper back-navigation scheme
   with phone-gesture support, and hold-to-peek with read-aloud (text only,
   no stroke animation).
+
+## Six sign kanji swapped in (9 Nov 2026)
+
+Andrew's decision, part of joining the kanji up with the Japanese drill
+app: 鉄 警 避 震 波 津 (card ids 502-507) take the display slots of 羊 的 卒
+比 泣 州 (ids 96, 230, 257, 303, 330, 399), so no other card moves. Meanings,
+readings and stroke counts as in Strokes' kanji-master.csv; example words
+checked against JMdict (jamdict-data's jamdict.db): 地下鉄 鉄道 · 警察 警告 ·
+避難 避ける · 地震 震える · 波 津波 電波 · 津波. PART_GROUPS_DATA replaced with
+Strokes' FAMILIES (101 groups: 金, 皮 and 聿 are new). Scores for the six
+that left are pruned on load (initApp), as with 々. The app is now under
+git (tag published-2026-10-18 = the version before this).
