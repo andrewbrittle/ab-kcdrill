@@ -240,6 +240,13 @@
      of any confidence tint, selected or not - deselecting always visibly
      clears it. */
   .tile.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: inset 0 0 0 2px var(--accent); }
+  /* Seen in materials (11 Nov 2026): a dot = pointed out as kanji, a ring = seen in passing. */
+  .tile { position: relative; }
+  .tile.seen-pointed::after, .tile.seen-passing::after { content: ''; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; }
+  .tile.seen-pointed::after { background: var(--accent); }
+  .tile.seen-passing::after { border: 1.5px solid var(--accent); width: 4px; height: 4px; }
+  .seen-note { flex: 0 0 100%; font-size: 12.5px; color: var(--text-muted); text-align: center; margin-top: 8px; line-height: 1.5; }
+  .seen-not { font-family: 'BIZ UDPGothic', sans-serif; font-size: 16px; color: var(--text); }
   /* Hold to peek (from the Japanese Drill app and Kanji Strokes): no iOS
      copy/Look Up bubble or text selection while a tile is held. */
   .tile { -webkit-touch-callout: none; -webkit-user-select: none; }
@@ -411,6 +418,7 @@
       <button class="btn active" id="browse-tab-order" onclick="setHomeBrowseMode('order')">In order</button>
       <button class="btn" id="browse-tab-part" onclick="setHomeBrowseMode('part')">By part</button>
       <button class="btn" id="browse-tab-jlpt" onclick="setHomeBrowseMode('jlpt')">By JLPT</button>
+      <button class="btn" id="browse-tab-seen" onclick="setHomeBrowseMode('seen')">Seen</button>
     </div>
     <div class="pill-row" id="group-pills"></div>
     <div class="setting study-toggle" id="set-study-home" onclick="toggleStudy()">
@@ -493,7 +501,7 @@
       <svg class="share-qr" viewBox="-2 -2 37 37" role="img" aria-label="QR code for this app" shape-rendering="crispEdges"><rect x="-2" y="-2" width="37" height="37" fill="#fff"/><path fill="#000" d="M0 0h7v1h-7zM8 0h6v1h-6zM15 0h5v1h-5zM21 0h3v1h-3zM26 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM9 1h1v1h-1zM11 1h2v1h-2zM14 1h1v1h-1zM16 1h2v1h-2zM20 1h1v1h-1zM26 1h1v1h-1zM32 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM9 2h1v1h-1zM12 2h1v1h-1zM15 2h1v1h-1zM17 2h2v1h-2zM20 2h3v1h-3zM26 2h1v1h-1zM28 2h3v1h-3zM32 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM9 3h2v1h-2zM12 3h1v1h-1zM14 3h1v1h-1zM22 3h1v1h-1zM24 3h1v1h-1zM26 3h1v1h-1zM28 3h3v1h-3zM32 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM8 4h2v1h-2zM11 4h1v1h-1zM13 4h1v1h-1zM16 4h3v1h-3zM21 4h1v1h-1zM23 4h1v1h-1zM26 4h1v1h-1zM28 4h3v1h-3zM32 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM11 5h2v1h-2zM15 5h3v1h-3zM22 5h1v1h-1zM26 5h1v1h-1zM32 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h1v1h-1zM24 6h1v1h-1zM26 6h7v1h-7zM13 7h1v1h-1zM16 7h1v1h-1zM18 7h1v1h-1zM21 7h4v1h-4zM1 8h7v1h-7zM10 8h2v1h-2zM13 8h2v1h-2zM17 8h1v1h-1zM22 8h3v1h-3zM27 8h2v1h-2zM32 8h1v1h-1zM0 9h2v1h-2zM9 9h1v1h-1zM12 9h2v1h-2zM18 9h4v1h-4zM23 9h1v1h-1zM26 9h2v1h-2zM29 9h2v1h-2zM32 9h1v1h-1zM0 10h2v1h-2zM3 10h4v1h-4zM9 10h4v1h-4zM14 10h1v1h-1zM18 10h1v1h-1zM21 10h2v1h-2zM24 10h3v1h-3zM28 10h1v1h-1zM30 10h2v1h-2zM1 11h1v1h-1zM4 11h2v1h-2zM11 11h1v1h-1zM13 11h2v1h-2zM16 11h1v1h-1zM20 11h2v1h-2zM23 11h4v1h-4zM28 11h3v1h-3zM0 12h1v1h-1zM4 12h5v1h-5zM11 12h2v1h-2zM14 12h3v1h-3zM18 12h2v1h-2zM22 12h1v1h-1zM24 12h1v1h-1zM27 12h3v1h-3zM31 12h1v1h-1zM2 13h4v1h-4zM7 13h3v1h-3zM11 13h1v1h-1zM13 13h2v1h-2zM21 13h3v1h-3zM26 13h1v1h-1zM31 13h2v1h-2zM0 14h1v1h-1zM3 14h2v1h-2zM6 14h1v1h-1zM9 14h1v1h-1zM11 14h1v1h-1zM13 14h2v1h-2zM16 14h3v1h-3zM20 14h1v1h-1zM25 14h2v1h-2zM30 14h2v1h-2zM1 15h3v1h-3zM5 15h1v1h-1zM8 15h1v1h-1zM11 15h2v1h-2zM16 15h6v1h-6zM25 15h6v1h-6zM1 16h2v1h-2zM6 16h1v1h-1zM10 16h1v1h-1zM14 16h2v1h-2zM17 16h3v1h-3zM22 16h2v1h-2zM25 16h1v1h-1zM27 16h3v1h-3zM32 16h1v1h-1zM0 17h2v1h-2zM5 17h1v1h-1zM7 17h1v1h-1zM10 17h2v1h-2zM13 17h1v1h-1zM16 17h8v1h-8zM26 17h2v1h-2zM29 17h4v1h-4zM2 18h1v1h-1zM6 18h6v1h-6zM13 18h1v1h-1zM18 18h1v1h-1zM24 18h5v1h-5zM30 18h2v1h-2zM2 19h1v1h-1zM4 19h2v1h-2zM9 19h5v1h-5zM16 19h1v1h-1zM20 19h2v1h-2zM25 19h7v1h-7zM1 20h2v1h-2zM6 20h4v1h-4zM14 20h1v1h-1zM17 20h2v1h-2zM22 20h1v1h-1zM24 20h2v1h-2zM27 20h3v1h-3zM32 20h1v1h-1zM0 21h4v1h-4zM7 21h4v1h-4zM13 21h1v1h-1zM17 21h3v1h-3zM21 21h1v1h-1zM23 21h2v1h-2zM26 21h1v1h-1zM29 21h2v1h-2zM32 21h1v1h-1zM0 22h1v1h-1zM3 22h4v1h-4zM9 22h4v1h-4zM14 22h1v1h-1zM16 22h1v1h-1zM18 22h1v1h-1zM24 22h1v1h-1zM27 22h5v1h-5zM0 23h1v1h-1zM8 23h2v1h-2zM12 23h3v1h-3zM18 23h1v1h-1zM20 23h2v1h-2zM23 23h3v1h-3zM28 23h5v1h-5zM0 24h1v1h-1zM4 24h1v1h-1zM6 24h4v1h-4zM13 24h1v1h-1zM15 24h2v1h-2zM18 24h3v1h-3zM22 24h1v1h-1zM24 24h5v1h-5zM32 24h1v1h-1zM8 25h1v1h-1zM11 25h2v1h-2zM14 25h1v1h-1zM16 25h1v1h-1zM19 25h2v1h-2zM24 25h1v1h-1zM28 25h1v1h-1zM30 25h1v1h-1zM32 25h1v1h-1zM0 26h7v1h-7zM8 26h4v1h-4zM13 26h4v1h-4zM21 26h1v1h-1zM23 26h2v1h-2zM26 26h1v1h-1zM28 26h1v1h-1zM30 26h2v1h-2zM0 27h1v1h-1zM6 27h1v1h-1zM8 27h2v1h-2zM11 27h2v1h-2zM15 27h1v1h-1zM18 27h1v1h-1zM20 27h5v1h-5zM28 27h5v1h-5zM0 28h1v1h-1zM2 28h3v1h-3zM6 28h1v1h-1zM8 28h2v1h-2zM11 28h1v1h-1zM14 28h1v1h-1zM16 28h1v1h-1zM22 28h1v1h-1zM24 28h6v1h-6zM31 28h1v1h-1zM0 29h1v1h-1zM2 29h3v1h-3zM6 29h1v1h-1zM8 29h2v1h-2zM12 29h3v1h-3zM16 29h1v1h-1zM19 29h2v1h-2zM25 29h1v1h-1zM28 29h1v1h-1zM30 29h1v1h-1zM32 29h1v1h-1zM0 30h1v1h-1zM2 30h3v1h-3zM6 30h1v1h-1zM8 30h1v1h-1zM10 30h2v1h-2zM13 30h1v1h-1zM15 30h1v1h-1zM18 30h1v1h-1zM21 30h1v1h-1zM23 30h1v1h-1zM26 30h2v1h-2zM0 31h1v1h-1zM6 31h1v1h-1zM8 31h2v1h-2zM11 31h1v1h-1zM13 31h2v1h-2zM20 31h3v1h-3zM28 31h1v1h-1zM30 31h1v1h-1zM0 32h7v1h-7zM10 32h1v1h-1zM12 32h1v1h-1zM17 32h1v1h-1zM19 32h2v1h-2zM22 32h4v1h-4zM27 32h1v1h-1zM31 32h1v1h-1z"/></svg>
       <div class="share-url">andrewbrittle.github.io/ab-kcdrill</div>
       <div class="share-divider"></div>
-      <a class="share-link" href="https://andrewbrittle.github.io/Japanese-drill-L3/" target="_blank" rel="noopener">
+      <a class="share-link" href="https://andrewbrittle.github.io/Japanese-drill-L4/" target="_blank" rel="noopener">
         <div class="n">Japanese drill &rarr;</div>
         <div class="d">Kana, kanji and vocab drilling for the Japanese course</div>
       </a>
@@ -505,10 +513,11 @@
     <div class="status" id="status"></div>
     <div style="text-align:center; font-size:12px; color:var(--accent); margin-top:0.75rem;">Any problems: Andrew 07973 835165</div>
     <div style="text-align:center; font-size:11px; color:var(--text-dim); margin-top:0.5rem; line-height:1.5;">Meanings and kanji data from KANJIDIC2, example words checked against JMdict — both © EDRDG, CC BY-SA 4.0.</div>
-    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.4rem;">v261109.001</div>
+    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.4rem;">v261111.002</div>
   </div>
 
 </main>
+<script src="seen.js"></script>
 <script>
 // =============================================================================
 // CARD DATA - one block, deliberately self-contained so it can be lifted out
@@ -590,6 +599,7 @@ function initApp() {
   GROUPS = computeGroups();
   PART_GROUPS = computePartGroups();
   JLPT_GROUPS = computeJlptGroups();
+  computeSeenGroups();
   activePool = KANJI_CARDS;
   checkDataIntegrity();
   buildGroupPills();
@@ -606,7 +616,7 @@ let settings = { light: false, showRomaji: true, showWordKanji: true, mode: 'kan
 // as that entry's heading). While settings.lastSeenChangelog doesn't match
 // this, the Settings cog shows a green .has-update flag; opening Settings
 // clears it. Same mechanism as the Japanese Drill app.
-const LATEST_CHANGELOG_ENTRY = '2026-11-09';
+const LATEST_CHANGELOG_ENTRY = '2026-11-11b';
 // Meaning->kanji mode is hidden for now (no reliable way to self-check a
 // mental image of a kanji against "got it right"), not removed - the pill
 // and its logic can come back later just by flipping this and re-adding the
@@ -937,12 +947,26 @@ function setHomeBrowseMode(mode) {
   document.getElementById('browse-tab-order').classList.toggle('active', mode === 'order');
   document.getElementById('browse-tab-part').classList.toggle('active', mode === 'part');
   document.getElementById('browse-tab-jlpt').classList.toggle('active', mode === 'jlpt');
+  document.getElementById('browse-tab-seen').classList.toggle('active', mode === 'seen');
   buildGroupPills();
 }
 function buildGroupPills() {
   const wrap = document.getElementById('group-pills');
   wrap.innerHTML = '';
-  if (homeBrowseMode === 'part') {
+  if (homeBrowseMode === 'seen') {
+    SEEN_GROUPS.forEach((g, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'pill';
+      btn.textContent = g.label + ' (' + g.cards.length + ')';
+      btn.onclick = () => openSeenGroup(i);
+      wrap.appendChild(btn);
+    });
+    const note = document.createElement('div');
+    note.className = 'seen-note';
+    note.innerHTML = 'Kanji the Japanese class has shown you: pointed out as kanji (a dot on the tile), or seen in passing on the handouts (a ring).'
+      + (SEEN_NOT_CARDS.length ? '<br>Seen but not in Kanji Cards yet: <span class="seen-not">' + jpHtml(SEEN_NOT_CARDS.join(' ')) + '</span> - first in line if the list grows or changes.' : '');
+    wrap.appendChild(note);
+  } else if (homeBrowseMode === 'part') {
     PART_GROUPS.forEach((g, i) => {
       const btn = document.createElement('button');
       btn.className = 'pill';
@@ -1022,6 +1046,30 @@ function openJlptGroup(i) {
   returnToScreen = 'select';
   document.getElementById('group-title').textContent = 'Kanji Cards · ' + g.label;
   buildGrid('blocks');
+  showScreen('select');
+}
+// SEEN IN MATERIALS (11 Nov 2026): kanji the Japanese class has shown,
+// from seen.js (shared with the Japanese drill app). One set overall: all,
+// pointed out (the colour sheet), seen in passing. Tiles anywhere show a
+// dot (pointed out) or a ring (seen in passing).
+const SEEN = window.KANJI_SEEN || { pointed: [], passing: [], words: [] };
+const seenKind = k => SEEN.pointed.includes(k) ? 'pointed' : SEEN.passing.includes(k) ? 'passing' : '';
+let SEEN_GROUPS = [], SEEN_NOT_CARDS = [];
+function computeSeenGroups() {
+  const byK = {};
+  KANJI_CARDS.forEach(c => { byK[c.k] = c; });
+  const pointed = SEEN.pointed.map(k => byK[k]).filter(Boolean);
+  const passing = SEEN.passing.filter(k => !SEEN.pointed.includes(k)).map(k => byK[k]).filter(Boolean);
+  SEEN_GROUPS = [{ label: 'All seen', cards: pointed.concat(passing) }, { label: 'Pointed out', cards: pointed }, { label: 'Seen in passing', cards: passing }];
+  SEEN_NOT_CARDS = [...new Set(SEEN.pointed.concat(SEEN.passing))].filter(k => !byK[k]);
+}
+function openSeenGroup(i) {
+  const g = SEEN_GROUPS[i];
+  activePool = g.cards;
+  selected.clear(); randomMode = false;
+  returnToScreen = 'select';
+  document.getElementById('group-title').textContent = 'Kanji Cards · Seen · ' + g.label;
+  buildGrid('flat');
   showScreen('select');
 }
 /* ---------- Search by meaning ----------
@@ -1204,7 +1252,7 @@ function makeTileGrid(cards) {
   tiles.className = 'tile-grid';
   cards.forEach(c => {
     const t = document.createElement('div');
-    t.className = 'tile';
+    t.className = 'tile' + (seenKind(c.k) ? ' seen-' + seenKind(c.k) : '');
     t.dataset.n = c.n;
     t.innerHTML = '<div class="tk">' + jpHtml(c.k) + '</div><div class="tm">' + esc(c.m.split(/[;,]/)[0]) + '</div>';
     // This is the pick-which-cards-to-drill screen, not the flashcard/quiz
