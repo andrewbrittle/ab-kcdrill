@@ -496,7 +496,7 @@
       <button class="btn" onclick="downloadBackup()">Download backup</button>
       <button class="btn" onclick="shareBackup()">Share backup</button>
       <button class="btn" onclick="document.getElementById('restore-file').click()">Restore from backup</button>
-      <input type="file" id="restore-file" accept="application/json,.json" style="display:none" onchange="restoreBackup(event)">
+      <input type="file" id="restore-file" accept="application/json,.json,text/plain,.txt" style="display:none" onchange="restoreBackup(event)">
     </div>
     <div class="setting static share-card" id="share-app-card">
       <div><div class="n">Share this app</div><div class="d">Let a friend scan this to open the app on their phone</div></div>
@@ -515,7 +515,7 @@
     <div class="status" id="status"></div>
     <div style="text-align:center; font-size:12px; color:var(--accent); margin-top:0.75rem;">Any problems: Andrew 07973 835165</div>
     <div style="text-align:center; font-size:11px; color:var(--text-dim); margin-top:0.5rem; line-height:1.5;">Meanings and kanji data from KANJIDIC2, example words checked against JMdict — both © EDRDG, CC BY-SA 4.0.</div>
-    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.4rem;">v261112.001</div>
+    <div style="text-align:center; font-size:12px; font-weight:600; color:var(--text-dim); margin-top:0.4rem;">v261112.002</div>
   </div>
 
 </main>
@@ -1687,9 +1687,13 @@ function backupFileName(app) {
 // SHARE, as in the drill apps (12 Nov 2026): the same file handed to the
 // phone's share sheet (Drive, OneDrive, Synology, email); a plain download
 // where a browser can't share files; nothing if you cancel.
+// Shared as .txt: Chrome on Android refuses .json files (it shares only
+// pictures, sound, video, PDF and plain text), so the first version always
+// fell back to a download. Same contents; Restore takes .txt too.
 async function shareBackupFile(json, name, download, status) {
+  name = name.replace(/\.json$/, '.txt');
   let file;
-  try { file = new File([json], name, { type: 'application/json' }); } catch (e) { file = null; }
+  try { file = new File([json], name, { type: 'text/plain' }); } catch (e) { file = null; }
   if (!file || !navigator.canShare || !navigator.canShare({ files: [file] })) { download(); return; }
   try { await navigator.share({ files: [file], title: name }); status('Backup shared'); }
   catch (e) { if (e && e.name !== 'AbortError') download(); }
